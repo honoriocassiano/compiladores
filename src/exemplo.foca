@@ -1,0 +1,6 @@
+int main()
+{
+	int b = 2;
+	int k = b + c;
+	int b = 3 / 7 - 9;
+}
