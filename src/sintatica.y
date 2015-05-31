@@ -71,13 +71,23 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 %}
 
 %token TK_NUM
-%token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT 
+%token TK_MAIN TK_ID
+%token TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL
 %token TK_ATR
 %token TK_SOMA TK_SUB 
 %token TK_MUL TK_DIV
 %token TK_BEGIN TK_END
 %token TK_FIM TK_ERROR
 %token TK_FLOAT
+
+%token TK_LOGICO
+
+%token TK_MENOR
+%token TK_MAIOR
+%token TK_MENOR_IGUAL
+%token TK_MAIOR_IGUAL
+%token TK_IGUAL
+%token TK_DIFERENTE
 
 %start S
 
@@ -104,14 +114,12 @@ S 			: TK_TIPO_INT TK_MAIN '(' ')' BLOCO_NO_B
 					cout << cabecalho.str() << "\nint main(void)\n{" << $5.traducao << "\n\n\treturn 0;\n}" << endl; 
 				} 
 				//myfile.close();
-			}
-			;
+			};
 
 BLOCO_NO_B	: COMANDOS TK_END
 			{
 				$$.traducao = $1.traducao;
-			}
-			;
+			};
 
 COMANDOS	: COMANDO ';' COMANDOS {
 				$$.traducao = $1.traducao + $3.traducao;
@@ -120,8 +128,7 @@ COMANDOS	: COMANDO ';' COMANDOS {
 			{
 				$$.traducao = "";
 				$$.label = "";
-			}
-			;
+			};
 
 COMANDO 	: DECLARACAO
 			{
@@ -134,7 +141,7 @@ COMANDO 	: DECLARACAO
 				$$.traducao = $1.traducao;
 			};
 
-ATRIBUICAO 	: TK_ID TK_ATR E
+ATRIBUICAO 	: TK_ID TK_ATR E_REL
 			{
 				//cout << $1.tipo << " " << $3.tipo << endl << endl;
 
@@ -178,14 +185,17 @@ ATRIBUICAO 	: TK_ID TK_ATR E
 				}
 			};
 
-COMANDO 	: E
+COMANDO 	: E_REL
 			{
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 			};
 
-DECLARACAO	: TIPO TK_ID TK_ATR E
+DECLARACAO	: TIPO TK_ID TK_ATR E_REL
 			{
+
+				//cout << "200: " << $2.label << " " << $2.tipo << " " << $4.tipo << endl << endl;
+
 				info_variavel atributos = { $1.label, gera_variavel_temporaria($1.label, $2.label), atoi($4.label.c_str()) };
 
 				if(mapa_variavel.find($2.label) == mapa_variavel.end()) {
@@ -200,9 +210,9 @@ DECLARACAO	: TIPO TK_ID TK_ATR E
 
 					if(atributos.tipo == $4.tipo) {
 
-						//cout << $1.tipo << " " << $3.tipo << endl << endl;
-
-						$$.traducao = "\t" + $4.traducao + "\n\t" + atributos.nome_temp + " " + $3.label + " " + $4.label + ";";
+						//cout << "213: "<< $2.tipo << " " << $4.tipo << endl << endl;
+						$$.traducao = "\t" + $4.traducao + "\n\t" + $1.traducao +" " + atributos.nome_temp + " " + $3.label + " " + $4.label + ";";
+						//cout << "217: "<< $$.traducao << endl << endl;
 
 					} else if(mapa_cast.find(chave) != mapa_cast.end()) {
 
@@ -216,9 +226,9 @@ DECLARACAO	: TIPO TK_ID TK_ATR E
 						}
 					} else {
 
-						cout << chave << endl << endl;
+						//cout << chave << endl << endl;
 
-						cout << "Erro na linha b" << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
 						erro = true;
 					}
 				} else {
@@ -247,13 +257,92 @@ DECLARACAO	: TIPO TK_ID TK_ATR E
 				}
 			};
 
+E_REL		: E TK_REL_OP E
+			{
+				//cout << $1.label << " " << $2.label << " " << $3.label << endl;
+				//cout << "263: " << $3.traducao << endl;
+
+				string nome_variavel_temporaria;
+
+				string chave = gera_chave($1.tipo, $3.tipo, $2.label);
+
+				if (mapa_cast.find(chave) != mapa_cast.end()) {
+					tipo_cast cast = mapa_cast[chave];
+
+					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado);
+
+					if(cast.operando_cast == 1) {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + "(" + $3.tipo + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
+					} else {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + $1.tipo + ") " + $3.label + ";";
+					}
+
+					$$.tipo = cast.resultado;
+
+					//cout << cast.resultado << endl << endl;
+
+				} else if($1.tipo == $3.tipo) {
+
+					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
+
+					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
+
+					//cout << "277: " << $$.traducao << endl << endl;
+
+					$$.tipo = "boolean";
+
+				} else {
+					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+
+					//cut << "297: " << $1.tipo << " " << $3.tipo << endl;
+
+					erro = true;
+				}
+
+				$$.label = nome_variavel_temporaria;
+				//$$.label = $3.label;
+			}
+			| E
+			{
+				$$.label = $1.label;
+				$$.traducao = $1.traducao;
+				$$.tipo = $1.tipo;
+			};
+
 E 			: E TK_ARIT_OP_S E_TEMP
 			{
 				string nome_variavel_temporaria;
 
 				string chave = gera_chave($1.tipo, $3.tipo, $2.label);
 
-				if($1.tipo == $3.tipo) {
+				if (mapa_cast.find(chave) != mapa_cast.end()) {
+					tipo_cast cast = mapa_cast[chave];
+
+					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado);
+
+					switch(cast.operando_cast) {
+						case 1:
+							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
+							break;
+						case 2:
+							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
+							break;
+						default:
+							cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+							erro = true;
+					}
+					/*
+					if(cast.operando_cast == 1) {
+
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
+					} else {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
+					}
+					*/
+
+					$$.tipo = cast.resultado;
+
+				} else if($1.tipo == $3.tipo) {
 
 					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
 
@@ -261,27 +350,16 @@ E 			: E TK_ARIT_OP_S E_TEMP
 
 					$$.tipo = $1.tipo;
 
-				} else if (mapa_cast.find(chave) != mapa_cast.end()) {
-					tipo_cast cast = mapa_cast[chave];
-
-					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado);
-
-					if(cast.operando_cast == 1) {
-
-						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
-					} else {
-						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
-					}
-
-					$$.tipo = cast.resultado;
-
 				} else {
 					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
 					erro = true;
+
+					//cout << "359: aa " << $1.tipo << " " << $2.label << " " << $3.tipo << endl;	
 				}
 
 				$$.label = nome_variavel_temporaria;
 
+				//cout << "362: " << $$.traducao << endl;
 				//$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
 
 			}
@@ -298,35 +376,43 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 
 				string chave = gera_chave($1.tipo, $3.tipo, $2.label);
 
-				if($1.tipo == $3.tipo) {
-
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
-
-					$$.traducao = $1.traducao + "\n\t" + $1.tipo + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
-
-					$$.tipo = $1.tipo;
-
-					//cout << "dnsfbhioudbuifgbfuigb" << endl << endl;
-
-				} else if (mapa_cast.find(chave) != mapa_cast.end()) {
+				if (mapa_cast.find(chave) != mapa_cast.end()) {
 					tipo_cast cast = mapa_cast[chave];
 
 					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado);
 
-					if(cast.operando_cast == 1) {
+					switch(cast.operando_cast) {
+						case 1:
+							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
+							break;
+						case 2:
+							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
+							break;
+						default:
+							cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+							erro = true;
+					}
 
+					/*
+					if(cast.operando_cast == 1) {
 						$$.traducao = $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
 					} else {
 						$$.traducao = $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
 					}
+					*/
 
 					$$.tipo = cast.resultado;
 
 					//cout << cast.resultado << endl << endl;
 
-				} else {
+				} else if($1.tipo == $3.tipo) {
 
-					//cout << "dnsfbhioudbuifgbfuigb" << endl << endl;
+					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
+
+					$$.tipo = $1.tipo;
+					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + $1.tipo + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
+
+				} else {
 
 					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
 					erro = true;
@@ -341,11 +427,22 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 				$$.tipo = $1.tipo;
-
 				// cout << "tipo " << $$.label << ": " << $1.tipo << endl << endl;
 			};
 
-VAL			: TK_NUM
+VAL			: '(' E ')'
+			{
+				$$.label = $2.label;
+				$$.traducao = $2.traducao;
+				$$.tipo = $2.tipo;
+			}
+			| TK_LOGICO
+			{
+				$$.label = $1.traducao;
+				$$.traducao = "";
+				$$.tipo = $1.tipo;
+			}
+			| TK_NUM
 			{
 				$$.label = $1.label;
 				$$.traducao = "";
@@ -368,6 +465,37 @@ VAL			: TK_NUM
 				$$.label = $1.label;
 				$$.traducao = "";
 				$$.tipo = $1.tipo;	
+			};
+
+TK_REL_OP	: TK_MENOR
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+			}
+			| TK_MAIOR
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+			}
+			| TK_MENOR_IGUAL
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+			}
+			| TK_MAIOR_IGUAL
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+			}
+			| TK_IGUAL
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+			}
+			| TK_DIFERENTE
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
 			};
 
 TK_ARIT_OP_S: TK_SOMA
@@ -395,13 +523,20 @@ TK_ARIT_OP_M: TK_MUL
 TIPO 		: TK_TIPO_INT
 			{
 				$$.label = $1.label;
-				$$.traducao = "";
+				//$$.traducao = "";
+				$$.traducao = $1.traducao;
 
 			}
 			| TK_TIPO_FLOAT
 			{
 				$$.label = $1.label;
-				$$.traducao = "";
+				//$$.traducao = "";
+				$$.traducao = $1.traducao;
+			}
+			| TK_TIPO_BOOL
+			{
+				$$.label = $1.label;
+				$$.traducao = $1.traducao;
 			};
 
 %%
@@ -450,6 +585,8 @@ void gera_mapa_cast() {
 		tipo_cast cast = {resultado, operando_cast};
 
 		mapa_cast[gera_chave(operador1, operador2, operacao)] = cast;
+
+		//cout << operador1 << " " << operador2 << " " << operacao;
 		
 		if(feof(file2)) {
 			break;

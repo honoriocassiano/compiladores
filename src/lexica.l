@@ -50,12 +50,20 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "int"		{
 				yylval.label = yytext;
+				yylval.traducao = "int";
 				return TK_TIPO_INT;
 			}
 
 "float"		{
 				yylval.label = yytext;
+				yylval.traducao = "float";
 				return TK_TIPO_FLOAT;
+			}
+
+"boolean"	{
+				yylval.traducao = "int";
+				yylval.label = yytext;
+				return TK_TIPO_BOOL;
 			}
 
 [(){}[\];,]	{ return *yytext; }
@@ -82,6 +90,56 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.traducao = yytext;
 				yylval.label = yytext;
 				return TK_DIV;
+			}
+
+"<"			{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				return TK_MENOR;
+			}
+
+">"			{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				return TK_MAIOR;
+			}
+
+"<="		{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				return TK_MENOR_IGUAL;
+			}
+
+">="		{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				return TK_MAIOR_IGUAL;
+			}
+
+"=="		{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				return TK_IGUAL;
+			}
+
+"!="		{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				return TK_DIFERENTE;
+			}
+
+"true"		{	
+				yylval.traducao = "1";
+				yylval.label = yytext;
+				yylval.tipo = "boolean";
+				return TK_LOGICO;
+			}
+
+"false"		{	
+				yylval.traducao = "0";
+				yylval.label = yytext;
+				yylval.tipo = "boolean";
+				return TK_LOGICO;
 			}
 
 {NUM}		{	

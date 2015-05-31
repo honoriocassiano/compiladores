@@ -1,5 +1,5 @@
-int	+	float	float	1
 int	-	float	float	1
+int	+	float	float	1
 int	*	float	float	1
 int	/	float	float	1
 float	+	int	float	2
@@ -7,3 +7,10 @@ float	-	int	float	2
 float	*	int	float	2
 float	/	int	float	2
 float	=	int	float	2
+float	==	int	boolean	2
+int	==	float	boolean	1
+boolean	+	boolean	null	-1
+boolean	-	boolean	null	-1
+boolean	*	boolean	null	-1
+boolean	/	boolean	null	-1
+boolean	=	boolean	null	-1
