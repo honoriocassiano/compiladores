@@ -75,7 +75,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 %token TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL
 %token TK_ATR
 %token TK_SOMA TK_SUB 
-%token TK_MUL TK_DIV
+%token TK_MUL TK_DIV TK_RESTO
 %token TK_BEGIN TK_END
 %token TK_FIM TK_ERROR
 %token TK_FLOAT
@@ -88,6 +88,8 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 %token TK_MAIOR_IGUAL
 %token TK_IGUAL
 %token TK_DIFERENTE
+
+%token TK_AND TK_OR
 
 %start S
 
@@ -141,7 +143,7 @@ COMANDO 	: DECLARACAO
 				$$.traducao = $1.traducao;
 			};
 
-ATRIBUICAO 	: TK_ID TK_ATR E_REL
+ATRIBUICAO 	: TK_ID TK_ATR E_OP_OR
 			{
 				//cout << $1.tipo << " " << $3.tipo << endl << endl;
 
@@ -166,14 +168,18 @@ ATRIBUICAO 	: TK_ID TK_ATR E_REL
 						if(cast.operando_cast == 2) {
 							$$.traducao = "\t" + $3.traducao + "\n\t" + variavel.nome_temp + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
 						} else {
-							cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+							cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $3.tipo
+							<< " a uma variável do tipo " << $1.tipo << endl << endl;
 							erro = true;
 						}
 					} else {
 
-						cout << chave << endl << endl;
+						//cout << chave << endl << endl;
 
-						cout << "Erro na linha b" << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						//cout << "Erro na linha b" << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+
+						cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $3.tipo
+							<< " a uma variável do tipo " << $1.tipo << endl << endl;
 						erro = true;
 					}
 
@@ -185,15 +191,14 @@ ATRIBUICAO 	: TK_ID TK_ATR E_REL
 				}
 			};
 
-COMANDO 	: E_REL
+COMANDO 	: E_OP_OR
 			{
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 			};
 
-DECLARACAO	: TIPO TK_ID TK_ATR E_REL
+DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 			{
-
 				//cout << "200: " << $2.label << " " << $2.tipo << " " << $4.tipo << endl << endl;
 
 				info_variavel atributos = { $1.label, gera_variavel_temporaria($1.label, $2.label), atoi($4.label.c_str()) };
@@ -221,19 +226,18 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_REL
 						if(cast.operando_cast == 2) {
 							$$.traducao = "\t" + $4.traducao + "\n\t" + atributos.nome_temp + " " + $3.label + " " + "(" + cast.resultado + ") " + $4.label + ";";
 						} else {
-							cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+							cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $4.tipo
+								<< " a uma variável do tipo " << atributos.tipo << endl << endl;
 							erro = true;
 						}
 					} else {
-
-						//cout << chave << endl << endl;
-
-						cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $4.tipo
+							<< " a uma variável do tipo " << atributos.tipo << endl << endl;
 						erro = true;
 					}
 				} else {
-					cout << "Erro na linha " << nlinha <<": Você já declarou a variável \"" << $2.label << "\", animal!" << endl << endl;
-
+					cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $4.tipo
+						<< " a uma variável do tipo " << atributos.tipo << endl << endl;
 					erro = true;
 				}
 
@@ -257,11 +261,96 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_REL
 				}
 			};
 
+E_OP_OR		: E_OP_OR TK_OR E_OP_AND
+			{
+				string nome_variavel_temporaria;
+
+				string chave = gera_chave($1.tipo, $3.tipo, $2.label);
+
+				/*if (mapa_cast.find(chave) != mapa_cast.end()) {
+					tipo_cast cast = mapa_cast[chave];
+
+					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado);
+
+					if(cast.operando_cast == 1) {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + "(" + $3.tipo + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
+					} else {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + $1.tipo + ") " + $3.label + ";";
+					}
+
+					$$.tipo = cast.resultado;
+
+				} else*/
+				if( ($1.tipo == "boolean") && ($1.tipo == $3.tipo)) {
+
+					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
+
+					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
+
+					$$.tipo = "boolean";
+
+				} else {
+					cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
+						<< " com um do tipo " << $3.tipo << endl << endl;
+
+					erro = true;
+				}
+
+				$$.label = nome_variavel_temporaria;
+			}
+			| E_OP_AND
+			{
+				$$.label = $1.label;
+				$$.traducao = $1.traducao;
+				$$.tipo = $1.tipo;
+			};
+
+E_OP_AND	: E_OP_AND TK_AND E_REL
+			{
+				string nome_variavel_temporaria;
+
+				string chave = gera_chave($1.tipo, $3.tipo, $2.label);
+
+				/*if (mapa_cast.find(chave) != mapa_cast.end()) {
+					tipo_cast cast = mapa_cast[chave];
+
+					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado);
+
+					if(cast.operando_cast == 1) {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + "(" + $3.tipo + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
+					} else {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + $1.tipo + ") " + $3.label + ";";
+					}
+
+					$$.tipo = cast.resultado;
+
+				} else*/
+				if( ($1.tipo == "boolean") && ($1.tipo == $3.tipo)) {
+
+					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
+
+					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
+
+					$$.tipo = "boolean";
+
+				} else {
+					cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
+						<< " com um do tipo " << $3.tipo << endl << endl;
+
+					erro = true;
+				}
+
+				$$.label = nome_variavel_temporaria;
+			}
+			| E_REL
+			{
+				$$.label = $1.label;
+				$$.traducao = $1.traducao;
+				$$.tipo = $1.tipo;
+			};
+
 E_REL		: E TK_REL_OP E
 			{
-				//cout << $1.label << " " << $2.label << " " << $3.label << endl;
-				//cout << "263: " << $3.traducao << endl;
-
 				string nome_variavel_temporaria;
 
 				string chave = gera_chave($1.tipo, $3.tipo, $2.label);
@@ -279,28 +368,22 @@ E_REL		: E TK_REL_OP E
 
 					$$.tipo = cast.resultado;
 
-					//cout << cast.resultado << endl << endl;
-
 				} else if($1.tipo == $3.tipo) {
 
 					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
 
 					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
 
-					//cout << "277: " << $$.traducao << endl << endl;
-
 					$$.tipo = "boolean";
 
 				} else {
-					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
-
-					//cut << "297: " << $1.tipo << " " << $3.tipo << endl;
+					cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
+						<< " com um do tipo " << $3.tipo << endl << endl;
 
 					erro = true;
 				}
 
 				$$.label = nome_variavel_temporaria;
-				//$$.label = $3.label;
 			}
 			| E
 			{
@@ -331,14 +414,6 @@ E 			: E TK_ARIT_OP_S E_TEMP
 							cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
 							erro = true;
 					}
-					/*
-					if(cast.operando_cast == 1) {
-
-						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
-					} else {
-						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
-					}
-					*/
 
 					$$.tipo = cast.resultado;
 
@@ -361,7 +436,6 @@ E 			: E TK_ARIT_OP_S E_TEMP
 
 				//cout << "362: " << $$.traducao << endl;
 				//$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
-
 			}
 			| E_TEMP
 			{
@@ -393,14 +467,6 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 							erro = true;
 					}
 
-					/*
-					if(cast.operando_cast == 1) {
-						$$.traducao = $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
-					} else {
-						$$.traducao = $1.traducao + "\n\t" + cast.resultado + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
-					}
-					*/
-
 					$$.tipo = cast.resultado;
 
 					//cout << cast.resultado << endl << endl;
@@ -430,7 +496,7 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 				// cout << "tipo " << $$.label << ": " << $1.tipo << endl << endl;
 			};
 
-VAL			: '(' E ')'
+VAL			: '(' E_OP_OR ')'
 			{
 				$$.label = $2.label;
 				$$.traducao = $2.traducao;
@@ -515,6 +581,11 @@ TK_ARIT_OP_M: TK_MUL
 				$$.label = $1.label;
 			}
 			| TK_DIV
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+			}
+			| TK_RESTO
 			{
 				$$.traducao = $1.traducao;
 				$$.label = $1.label;

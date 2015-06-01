@@ -92,6 +92,12 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_DIV;
 			}
 
+"%"			{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				return TK_RESTO;
+			}
+
 "<"			{
 				yylval.traducao = yytext;
 				yylval.label = yytext;
@@ -126,6 +132,18 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.traducao = yytext;
 				yylval.label = yytext;
 				return TK_DIFERENTE;
+			}
+
+"and"		{	
+				yylval.traducao = "&&";
+				yylval.label = yytext;
+				return TK_AND;
+			}
+
+"or"		{	
+				yylval.traducao = "||";
+				yylval.label = yytext;
+				return TK_OR;
 			}
 
 "true"		{	
