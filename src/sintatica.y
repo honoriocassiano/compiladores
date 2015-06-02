@@ -70,17 +70,16 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %}
 
-%token TK_NUM
 %token TK_MAIN TK_ID
-%token TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL
+%token TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_TIPO_DOUBLE TK_TIPO_LONG
 %token TK_ATR
 %token TK_SOMA TK_SUB 
 %token TK_MUL TK_DIV TK_RESTO
 %token TK_BEGIN TK_END
 %token TK_FIM TK_ERROR
-%token TK_FLOAT
+%token TK_NUM TK_FLOAT TK_LONG TK_DOUBLE
 
-%token TK_LOGICO
+%token TK_LOGICO TK_NOT
 
 %token TK_MENOR
 %token TK_MAIOR
@@ -199,7 +198,7 @@ COMANDO 	: E_OP_OR
 
 DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 			{
-				//cout << "200: " << $2.label << " " << $2.tipo << " " << $4.tipo << endl << endl;
+				// cout << $1.traducao << endl << endl;
 
 				info_variavel atributos = { $1.label, gera_variavel_temporaria($1.label, $2.label), atoi($4.label.c_str()) };
 
@@ -216,7 +215,7 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 					if(atributos.tipo == $4.tipo) {
 
 						//cout << "213: "<< $2.tipo << " " << $4.tipo << endl << endl;
-						$$.traducao = "\t" + $4.traducao + "\n\t" + $1.traducao +" " + atributos.nome_temp + " " + $3.label + " " + $4.label + ";";
+						$$.traducao = "\t" + $4.traducao + "\n\t" + $1.traducao + " " + atributos.nome_temp + " " + $3.label + " " + $4.label + ";";
 						//cout << "217: "<< $$.traducao << endl << endl;
 
 					} else if(mapa_cast.find(chave) != mapa_cast.end()) {
@@ -224,7 +223,7 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 						tipo_cast cast = mapa_cast[chave];
 
 						if(cast.operando_cast == 2) {
-							$$.traducao = "\t" + $4.traducao + "\n\t" + atributos.nome_temp + " " + $3.label + " " + "(" + cast.resultado + ") " + $4.label + ";";
+							$$.traducao = "\t" + $4.traducao + "\n\t" + $1.traducao + " " + atributos.nome_temp + " " + $3.label + " " + "(" + cast.resultado + ") " + $4.label + ";";
 						} else {
 							cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $4.tipo
 								<< " a uma variável do tipo " << atributos.tipo << endl << endl;
@@ -488,12 +487,36 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 
 				// $$.traducao = $1.traducao + "\n\t" + "int " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
 			}
+			| E_NOT
+			{
+				$$.label = $1.label;
+				$$.traducao = $1.traducao;
+				$$.tipo = $1.tipo;
+			};
+
+E_NOT		: TK_NOT E_NOT
+			{
+				string nome_variavel_temporaria;
+
+				if ($2.tipo == "boolean") {
+
+					nome_variavel_temporaria = gera_variavel_temporaria($2.tipo);
+
+					$$.traducao = $2.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.traducao + $2.label + ";";
+					
+				}else {
+					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+					erro = true;
+				}
+
+				$$.tipo = $2.tipo;
+				$$.label = nome_variavel_temporaria;
+			}
 			| VAL
 			{
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 				$$.tipo = $1.tipo;
-				// cout << "tipo " << $$.label << ": " << $1.tipo << endl << endl;
 			};
 
 VAL			: '(' E_OP_OR ')'
@@ -527,6 +550,18 @@ VAL			: '(' E_OP_OR ')'
 				$$.tipo = mapa_variavel[$1.label].tipo;
 			}
 			| TK_FLOAT
+			{
+				$$.label = $1.label;
+				$$.traducao = "";
+				$$.tipo = $1.tipo;	
+			}
+			| TK_LONG
+			{
+				$$.label = $1.label;
+				$$.traducao = "";
+				$$.tipo = $1.tipo;	
+			}
+			| TK_DOUBLE
 			{
 				$$.label = $1.label;
 				$$.traducao = "";
@@ -596,7 +631,6 @@ TIPO 		: TK_TIPO_INT
 				$$.label = $1.label;
 				//$$.traducao = "";
 				$$.traducao = $1.traducao;
-
 			}
 			| TK_TIPO_FLOAT
 			{
@@ -605,6 +639,16 @@ TIPO 		: TK_TIPO_INT
 				$$.traducao = $1.traducao;
 			}
 			| TK_TIPO_BOOL
+			{
+				$$.label = $1.label;
+				$$.traducao = $1.traducao;
+			}
+			| TK_TIPO_LONG
+			{
+				$$.label = $1.label;
+				$$.traducao = $1.traducao;
+			}
+			| TK_TIPO_DOUBLE
 			{
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;

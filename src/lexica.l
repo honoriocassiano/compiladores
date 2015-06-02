@@ -14,6 +14,8 @@ LETRA [A-Za-z_]
 DELIM {ESPACO}+
 NUM {DIGITO}+
 REAL {NUM}+("."{NUM}+)?
+LONG {DIGITO}+[lL]
+DOUBLE {NUM}+("."{NUM}+)[dD]
 CHAR \'({LETRA}|{NUM})\'
 ID {LETRA}({LETRA}|{NUM})*
 
@@ -58,6 +60,18 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.label = yytext;
 				yylval.traducao = "float";
 				return TK_TIPO_FLOAT;
+			}
+
+"long"		{
+				yylval.label = yytext;
+				yylval.traducao = "long";
+				return TK_TIPO_LONG;
+			}
+
+"double"	{
+				yylval.label = yytext;
+				yylval.traducao = "double";
+				return TK_TIPO_DOUBLE;
 			}
 
 "boolean"	{
@@ -146,6 +160,12 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_OR;
 			}
 
+"not"		{	
+				yylval.traducao = "!";
+				yylval.label = yytext;
+				return TK_NOT;
+			}
+
 "true"		{	
 				yylval.traducao = "1";
 				yylval.label = yytext;
@@ -171,6 +191,20 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.label = yytext;
 				yylval.tipo = "float";
 				return TK_FLOAT;
+
+			}
+
+{LONG}		{	
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				yylval.tipo = "long";
+				return TK_LONG;
+			}
+{DOUBLE}	{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				yylval.tipo = "double";
+				return TK_DOUBLE;
 
 			}	
 

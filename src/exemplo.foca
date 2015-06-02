@@ -1,5 +1,5 @@
 int main()
 
-	boolean a = (2 >= 3) or (1 < 2) and (4 != 0);
+	double a = 2d;
 
 end
