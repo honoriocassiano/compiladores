@@ -18,6 +18,7 @@ typedef struct
 	string label;
 	string traducao;
 	string tipo;
+	int tamanho;
 } _atributos;
 
 // Variável que indica se ocorreram erros ao compilar o programa
@@ -33,7 +34,7 @@ typedef struct _info_variavel
 {
 	string tipo;
 	string nome_temp;
-	int valor;
+	int tamanho;
 } info_variavel;
 
 // Estrutura que guarda informações sobre o cast a se fazer
@@ -71,13 +72,13 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 %}
 
 %token TK_MAIN TK_ID
-%token TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_TIPO_DOUBLE TK_TIPO_LONG
+%token TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_TIPO_DOUBLE TK_TIPO_LONG TK_TIPO_STRING
 %token TK_ATR
 %token TK_SOMA TK_SUB 
 %token TK_MUL TK_DIV TK_RESTO
 %token TK_BEGIN TK_END
 %token TK_FIM TK_ERROR
-%token TK_NUM TK_FLOAT TK_LONG TK_DOUBLE
+%token TK_NUM TK_FLOAT TK_LONG TK_DOUBLE TK_STRING
 
 %token TK_LOGICO TK_NOT
 
@@ -144,8 +145,6 @@ COMANDO 	: DECLARACAO
 
 ATRIBUICAO 	: TK_ID TK_ATR E_OP_OR
 			{
-				//cout << $1.tipo << " " << $3.tipo << endl << endl;
-
 				if(mapa_variavel.find($1.label) != mapa_variavel.end()) {
 
 					info_variavel variavel = mapa_variavel[$1.label];
@@ -155,8 +154,6 @@ ATRIBUICAO 	: TK_ID TK_ATR E_OP_OR
 					$$.tipo = variavel.tipo;
 
 					if(variavel.tipo == $3.tipo) {
-
-						//cout << $1.tipo << " " << $3.tipo << endl << endl;
 
 						$$.traducao = "\t" + $3.traducao + "\n\t" + variavel.nome_temp + " " + $2.label + " " + $3.label + ";";
 
@@ -173,17 +170,12 @@ ATRIBUICAO 	: TK_ID TK_ATR E_OP_OR
 						}
 					} else {
 
-						//cout << chave << endl << endl;
-
-						//cout << "Erro na linha b" << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
-
 						cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $3.tipo
 							<< " a uma variável do tipo " << $1.tipo << endl << endl;
 						erro = true;
 					}
 
 				} else {
-					//cout << "Erro na linha " << nlinha <<": Você já declarou a variável \"" << $2.label << "\", animal!" << endl << endl;
 					cout << "Erro na linha " << nlinha <<": Que porra de variável \"" << $1.label << "\" é essa?" << endl << endl;
 
 					erro = true;
@@ -198,9 +190,7 @@ COMANDO 	: E_OP_OR
 
 DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 			{
-				// cout << $1.traducao << endl << endl;
-
-				info_variavel atributos = { $1.label, gera_variavel_temporaria($1.label, $2.label), atoi($4.label.c_str()) };
+				info_variavel atributos = { $1.label, gera_variavel_temporaria($1.label, $2.label), $4.tamanho };
 
 				if(mapa_variavel.find($2.label) == mapa_variavel.end()) {
 
@@ -209,14 +199,26 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 					string chave = gera_chave(atributos.tipo, $4.tipo, $3.label);
 
 					$$.label = atributos.nome_temp;
-					//$$.traducao = "\t" + $4.traducao + "\n\t" + $1.label + " " + atributos.nome_temp + " = " + $4.label + ";\n\t";
 					$$.tipo = $1.label;
 
 					if(atributos.tipo == $4.tipo) {
-
-						//cout << "213: "<< $2.tipo << " " << $4.tipo << endl << endl;
-						$$.traducao = "\t" + $4.traducao + "\n\t" + $1.traducao + " " + atributos.nome_temp + " " + $3.label + " " + $4.label + ";";
-						//cout << "217: "<< $$.traducao << endl << endl;
+						
+						if($1.label == "string") {
+							
+							stringstream traducao;
+							
+							traducao << "\n\t" << $1.traducao << " " << atributos.nome_temp << "[" << (atributos.tamanho+1) << "]" << ";";
+							traducao << "\n\tstrcpy(" << atributos.nome_temp << ", " << $4.label << ");";
+							
+							$$.traducao = traducao.str();
+							
+							adiciona_biblioteca_cabecalho("string.h");
+							
+							
+						} else {
+							//$$.traducao = "\n\t" + $1.traducao + " " + atributos.nome_temp + ";";
+							$$.traducao = "\t" + $4.traducao + "\n\t" + $1.traducao + " " + atributos.nome_temp + " " + $3.label + " " + $4.label + ";";
+						}
 
 					} else if(mapa_cast.find(chave) != mapa_cast.end()) {
 
@@ -239,8 +241,6 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 						<< " a uma variável do tipo " << atributos.tipo << endl << endl;
 					erro = true;
 				}
-
-				//cout << $1.label << endl << endl;
 			}
 			| TIPO TK_ID
 			{
@@ -250,8 +250,20 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 					mapa_variavel[$2.label] = atributos;
 
 					$$.label = atributos.nome_temp;
-					$$.traducao = "\t" + $1.label + " " + atributos.nome_temp + " = " + "0" + ";\n";
+					//TODO adicionar string vazia aqui
+					//$$.traducao = "\t" + $1.label + " " + atributos.nome_temp + " = " + "0" + ";\n";
+					
+					if($1.label == "string") {
+						$$.traducao = "\n\t" + $1.traducao + " " + atributos.nome_temp + "[" + "1" + "]" + ";";
+						$$.traducao = $$.traducao + "\n\tstrcpy(" + atributos.nome_temp + ", \"\");";
+						
+						adiciona_biblioteca_cabecalho("string.h");
+					} else {
+						$$.traducao = "\n\t" + $1.traducao + " " + atributos.nome_temp + ";";
+					}
+					
 					$$.tipo = $1.label;
+					$$.tamanho = $2.tamanho;
 					
 				} else {
 					cout << "Erro na linha " << nlinha <<": Você já declarou a variável \"" << $2.label << "\", animal!" << endl << endl;
@@ -302,6 +314,7 @@ E_OP_OR		: E_OP_OR TK_OR E_OP_AND
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 				$$.tipo = $1.tipo;
+				$$.tamanho = $1.tamanho;
 			};
 
 E_OP_AND	: E_OP_AND TK_AND E_REL
@@ -346,6 +359,7 @@ E_OP_AND	: E_OP_AND TK_AND E_REL
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 				$$.tipo = $1.tipo;
+				$$.tamanho = $1.tamanho;
 			};
 
 E_REL		: E TK_REL_OP E
@@ -389,6 +403,7 @@ E_REL		: E TK_REL_OP E
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 				$$.tipo = $1.tipo;
+				$$.tamanho = $1.tamanho;
 			};
 
 E 			: E TK_ARIT_OP_S E_TEMP
@@ -441,6 +456,7 @@ E 			: E TK_ARIT_OP_S E_TEMP
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 				$$.tipo = $1.tipo;
+				$$.tamanho = $1.tamanho;
 			};
 
 E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
@@ -484,7 +500,6 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 				}
 
 				$$.label = nome_variavel_temporaria;
-
 				// $$.traducao = $1.traducao + "\n\t" + "int " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
 			}
 			| E_NOT
@@ -492,6 +507,7 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 				$$.tipo = $1.tipo;
+				$$.tamanho = $1.tamanho;
 			};
 
 E_NOT		: TK_NOT E_NOT
@@ -517,6 +533,7 @@ E_NOT		: TK_NOT E_NOT
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 				$$.tipo = $1.tipo;
+				$$.tamanho = $1.tamanho;
 			};
 
 VAL			: '(' E_OP_OR ')'
@@ -566,6 +583,13 @@ VAL			: '(' E_OP_OR ')'
 				$$.label = $1.label;
 				$$.traducao = "";
 				$$.tipo = $1.tipo;	
+			}
+			| TK_STRING
+			{
+				$$.label = "\"" + $1.label + "\"";
+				$$.traducao = "";
+				$$.tipo = $1.tipo;
+				$$.tamanho = $1.tamanho;
 			};
 
 TK_REL_OP	: TK_MENOR
@@ -649,6 +673,11 @@ TIPO 		: TK_TIPO_INT
 				$$.traducao = $1.traducao;
 			}
 			| TK_TIPO_DOUBLE
+			{
+				$$.label = $1.label;
+				$$.traducao = $1.traducao;
+			}
+			| TK_TIPO_STRING
 			{
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;

@@ -17,6 +17,7 @@ REAL {NUM}+("."{NUM}+)?
 LONG {DIGITO}+[lL]
 DOUBLE {NUM}+("."{NUM}+)[dD]
 CHAR \'({LETRA}|{NUM})\'
+STRING "\"".*"\""
 ID {LETRA}({LETRA}|{NUM})*
 
 %%
@@ -43,6 +44,13 @@ ID {LETRA}({LETRA}|{NUM})*
 
 				return TK_END;
 			}
+			
+"string"	{
+				yylval.traducao = "char";
+				yylval.label = yytext;
+
+				return TK_TIPO_STRING;
+			}			
 
 {DELIM} 	{}
 
@@ -130,6 +138,7 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_MENOR_IGUAL;
 			}
 
+
 ">="		{
 				yylval.traducao = yytext;
 				yylval.label = yytext;
@@ -186,12 +195,12 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.tipo = "int";
 				return TK_NUM;
 			}
+			
 {REAL}		{
 				yylval.traducao = yytext;
 				yylval.label = yytext;
 				yylval.tipo = "float";
 				return TK_FLOAT;
-
 			}
 
 {LONG}		{	
@@ -200,16 +209,36 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.tipo = "long";
 				return TK_LONG;
 			}
+			
 {DOUBLE}	{
 				yylval.traducao = yytext;
 				yylval.label = yytext;
 				yylval.tipo = "double";
 				return TK_DOUBLE;
-
 			}	
 
-{ID}		{ yylval.label = yytext; return TK_ID; }
-.			{ *yytext; }
+{ID}		{
+				yylval.label = yytext;
+				return TK_ID;
+			}
+
+{STRING}  	{
+				string texto = yytext;
+				
+				texto.replace(texto.begin(), texto.begin() + 1, "");
+				texto.replace(texto.end() - 1, texto.end(), "");
+				
+				yylval.traducao = texto;
+				yylval.label = texto;
+				yylval.tipo = "string";
+				yylval.tamanho = texto.size();
+				
+				return TK_STRING;
+			}
+			
+.			{
+				*yytext;
+			}
 
 %%
 

@@ -1,5 +1,8 @@
 int main()
 
-	double a = 2d;
-
+	
+	
+	string a = "aad";
+	
+	
 end
