@@ -18,6 +18,7 @@ typedef struct
 	string label;
 	string traducao;
 	string tipo;
+	string tipo_traducao;
 	int tamanho;
 } _atributos;
 
@@ -65,7 +66,7 @@ string gera_chave(string operador1, string operador2, string operacao);
 
 // Função para gerar nomes temporários para as variáveis
 
-string gera_variavel_temporaria(string tipo, string nome="");
+string gera_variavel_temporaria(string tipo, int tamanho, string nome="");
 
 void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
@@ -123,7 +124,8 @@ BLOCO_NO_B	: COMANDOS TK_END
 				$$.traducao = $1.traducao;
 			};
 
-COMANDOS	: COMANDO ';' COMANDOS {
+COMANDOS	: COMANDO ';' COMANDOS
+			{
 				$$.traducao = $1.traducao + $3.traducao;
 			}
 			|
@@ -181,7 +183,7 @@ ATRIBUICAO 	: TK_ID TK_ATR E_OP_OR
 					erro = true;
 				}
 			};
-
+/* Fuck this shit : Dúvida: Por que este comando está aqui em baixo?*/
 COMANDO 	: E_OP_OR
 			{
 				$$.label = $1.label;
@@ -190,11 +192,12 @@ COMANDO 	: E_OP_OR
 
 DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 			{
-				info_variavel atributos = { $1.label, gera_variavel_temporaria($1.label, $2.label), $4.tamanho };
+				//info_variavel atributos = { $1.label, gera_variavel_temporaria($1.label, $4.tamanho, $2.label), $4.tamanho };
+				string nome_temp = gera_variavel_temporaria($1.label, $4.tamanho, $2.label);
 
-				if(mapa_variavel.find($2.label) == mapa_variavel.end()) {
+				//if(mapa_variavel.find($2.label) == mapa_variavel.end()) {
 
-					mapa_variavel[$2.label] = atributos;
+					info_variavel atributos = mapa_variavel[$2.label];
 
 					string chave = gera_chave(atributos.tipo, $4.tipo, $3.label);
 
@@ -234,20 +237,23 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 					} else {
 						cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $4.tipo
 							<< " a uma variável do tipo " << atributos.tipo << endl << endl;
+
 						erro = true;
 					}
-				} else {
-					cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $4.tipo
-						<< " a uma variável do tipo " << atributos.tipo << endl << endl;
+				/*} else {/* Fuck this shit: era pra ser variavel ja existe 
+					cout << "Erro na linha " << nlinha <<": A variável " << $2.label
+						<< " a uma variável do tipo " << endl << endl;
 					erro = true;
-				}
+				}*/
 			}
 			| TIPO TK_ID
 			{
-				info_variavel atributos = { $1.label, gera_variavel_temporaria($1.label, $2.label), 0 };
+				//info_variavel atributos = { $1.label, gera_variavel_temporaria($1.label, 0, $2.label), 0 };
 
-				if(mapa_variavel.find($2.label) == mapa_variavel.end()) {
-					mapa_variavel[$2.label] = atributos;
+				//if(mapa_variavel.find($2.label) == mapa_variavel.end()) {
+					string nome_temp = gera_variavel_temporaria($1.label, 0, $2.label);
+
+					info_variavel atributos = mapa_variavel[$2.label];
 
 					$$.label = atributos.nome_temp;
 					//TODO adicionar string vazia aqui
@@ -265,12 +271,12 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 					$$.tipo = $1.label;
 					$$.tamanho = $2.tamanho;
 					
-				} else {
+				}/* else {
 					cout << "Erro na linha " << nlinha <<": Você já declarou a variável \"" << $2.label << "\", animal!" << endl << endl;
 
 					erro = true;
-				}
-			};
+				}*/
+			//};
 
 E_OP_OR		: E_OP_OR TK_OR E_OP_AND
 			{
@@ -294,7 +300,7 @@ E_OP_OR		: E_OP_OR TK_OR E_OP_AND
 				} else*/
 				if( ($1.tipo == "boolean") && ($1.tipo == $3.tipo)) {
 
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
+					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
 
 					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
 
@@ -339,7 +345,7 @@ E_OP_AND	: E_OP_AND TK_AND E_REL
 				} else*/
 				if( ($1.tipo == "boolean") && ($1.tipo == $3.tipo)) {
 
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
+					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
 
 					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
 
@@ -371,7 +377,9 @@ E_REL		: E TK_REL_OP E
 				if (mapa_cast.find(chave) != mapa_cast.end()) {
 					tipo_cast cast = mapa_cast[chave];
 
-					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado);
+					/** TODO verificar se o tamanho está certo
+					*/
+					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
 
 					if(cast.operando_cast == 1) {
 						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + "(" + $3.tipo + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
@@ -383,7 +391,9 @@ E_REL		: E TK_REL_OP E
 
 				} else if($1.tipo == $3.tipo) {
 
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
+					/** TODO verificar se o tamanho está certo
+					*/
+					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, 0);
 
 					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
 
@@ -415,7 +425,9 @@ E 			: E TK_ARIT_OP_S E_TEMP
 				if (mapa_cast.find(chave) != mapa_cast.end()) {
 					tipo_cast cast = mapa_cast[chave];
 
-					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado);
+					/** TODO verificar se o tamanho está certo
+					*/
+					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
 
 					switch(cast.operando_cast) {
 						case 1:
@@ -433,8 +445,8 @@ E 			: E TK_ARIT_OP_S E_TEMP
 
 				} else if($1.tipo == $3.tipo) {
 
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
-
+					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, 0);
+					/* Fuck this shit : atribuiçao com soma imprime o nome da variavel em lugar errado, para resolver retire do $3.traducao até o $1.traducao*/
 					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + $1.tipo + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
 
 					$$.tipo = $1.tipo;
@@ -468,7 +480,7 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 				if (mapa_cast.find(chave) != mapa_cast.end()) {
 					tipo_cast cast = mapa_cast[chave];
 
-					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado);
+					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
 
 					switch(cast.operando_cast) {
 						case 1:
@@ -488,9 +500,11 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 
 				} else if($1.tipo == $3.tipo) {
 
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo);
-
+					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, 0);
+					
 					$$.tipo = $1.tipo;
+					
+					/* Fuck this shit : int d=c/a imprime o nome da variavel em lugar errado, para resolver retire do $3.traducao até o $1.traducao*/
 					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + $1.tipo + " " + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
 
 				} else {
@@ -516,7 +530,7 @@ E_NOT		: TK_NOT E_NOT
 
 				if ($2.tipo == "boolean") {
 
-					nome_variavel_temporaria = gera_variavel_temporaria($2.tipo);
+					nome_variavel_temporaria = gera_variavel_temporaria($2.tipo, 0);
 
 					$$.traducao = $2.traducao + "\n\t" + "int" + " " + nome_variavel_temporaria + " = " + $1.traducao + $2.label + ";";
 					
@@ -563,7 +577,7 @@ VAL			: '(' E_OP_OR ')'
 				}
 
 				$$.label = mapa_variavel[$1.label].nome_temp;
-				$$.traducao = $$.label;
+				$$.traducao = "";
 				$$.tipo = mapa_variavel[$1.label].tipo;
 			}
 			| TK_FLOAT
@@ -691,19 +705,32 @@ int yyparse();
 
 int contador = 0;
 
-string gera_variavel_temporaria(string tipo, string nome) {
+string gera_variavel_temporaria(string tipo, int tamanho, string nome) {
 
 	stringstream nome_temporario;
+	string nome_mapa;
 
 	nome_temporario << "temp_" << tipo << "_";
 
 	if (!nome.empty()) {
 		nome_temporario << nome << "_";
+		nome_mapa = nome;
+	} else {
+		nome_mapa = nome_temporario.str();
 	}
 
 	nome_temporario << contador;
 
 	contador++;
+
+	info_variavel atributos = {tipo, nome_temporario.str(), tamanho};
+	if(mapa_variavel.find(nome_mapa) == mapa_variavel.end()) {
+		mapa_variavel[nome_mapa] = atributos;
+
+	} else {
+		cout << "Erro na linha " << nlinha <<": Você já declarou a variável \"" << nome << "\"." << endl << endl;
+		erro = true;
+	}
 
 	return nome_temporario.str();
 }

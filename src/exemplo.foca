@@ -1,8 +1,12 @@
 int main()
 
+	# Erro: imprime nome das variaveis sem ser necessário
 	
-	
-	string a = "aad";
-	
+	#int a ;
+	#int b;
+	#int c=2;
+	#int d = c/a;
+	#a = c/d+b*a;
+	boolean a = 1 < 2 or false;
 	
 end

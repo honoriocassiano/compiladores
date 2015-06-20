@@ -9,7 +9,7 @@ using namespace std;
 ESPACO [ \t]
 DIGITO [0-9]
 LETRA [A-Za-z_]
-
+COMENTARIO #.*"\n"
 
 DELIM {ESPACO}+
 NUM {DIGITO}+
@@ -44,15 +44,12 @@ ID {LETRA}({LETRA}|{NUM})*
 
 				return TK_END;
 			}
-			
-"string"	{
-				yylval.traducao = "char";
-				yylval.label = yytext;
-
-				return TK_TIPO_STRING;
-			}			
 
 {DELIM} 	{}
+
+{COMENTARIO} {
+				nlinha++;
+			}
 
 "main"		{
 				return TK_MAIN;
@@ -86,6 +83,13 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.traducao = "int";
 				yylval.label = yytext;
 				return TK_TIPO_BOOL;
+			}
+
+"string"	{
+				yylval.traducao = "char";
+				yylval.label = yytext;
+
+				return TK_TIPO_STRING;
 			}
 
 [(){}[\];,]	{ return *yytext; }
@@ -179,6 +183,7 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.traducao = "1";
 				yylval.label = yytext;
 				yylval.tipo = "boolean";
+				yylval.tipo_traducao = "int";
 				return TK_LOGICO;
 			}
 
@@ -186,6 +191,7 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.traducao = "0";
 				yylval.label = yytext;
 				yylval.tipo = "boolean";
+				yylval.tipo_traducao = "int";
 				return TK_LOGICO;
 			}
 
@@ -193,6 +199,8 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.traducao = yytext;
 				yylval.label = yytext;
 				yylval.tipo = "int";
+				yylval.tipo_traducao = "int";
+				yylval.tamanho = ((string) yytext).size();
 				return TK_NUM;
 			}
 			
@@ -200,6 +208,8 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.traducao = yytext;
 				yylval.label = yytext;
 				yylval.tipo = "float";
+				yylval.tipo_traducao = "float";
+				yylval.tamanho = ((string) yytext).size();
 				return TK_FLOAT;
 			}
 
@@ -207,6 +217,8 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.traducao = yytext;
 				yylval.label = yytext;
 				yylval.tipo = "long";
+				yylval.tipo_traducao = "long";
+				yylval.tamanho = ((string) yytext).size();
 				return TK_LONG;
 			}
 			
@@ -214,6 +226,8 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.traducao = yytext;
 				yylval.label = yytext;
 				yylval.tipo = "double";
+				yylval.tipo_traducao = "double";
+				yylval.tamanho = ((string) yytext).size();
 				return TK_DOUBLE;
 			}	
 
@@ -231,6 +245,7 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.traducao = texto;
 				yylval.label = texto;
 				yylval.tipo = "string";
+				yylval.tipo_traducao = "char";
 				yylval.tamanho = texto.size();
 				
 				return TK_STRING;
