@@ -65,7 +65,6 @@ void gera_mapa_cast();
 string gera_chave(string operador1, string operador2, string operacao);
 
 // Função para gerar nomes temporários para as variáveis
-
 string gera_variavel_temporaria(string tipo, int tamanho, string nome="");
 
 void adiciona_biblioteca_cabecalho(string nome_biblioteca);
@@ -210,13 +209,12 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 							
 							stringstream traducao;
 							
-							traducao << "\n\t" << $1.traducao << " " << atributos.nome_temp << "[" << (atributos.tamanho+1) << "]" << ";";
+							traducao << $4.traducao << "\n\t" << $1.traducao << " " << atributos.nome_temp << "[" << (atributos.tamanho+1) << "]" << ";";
 							traducao << "\n\tstrcpy(" << atributos.nome_temp << ", " << $4.label << ");";
 							
 							$$.traducao = traducao.str();
 							
 							adiciona_biblioteca_cabecalho("string.h");
-							
 							
 						} else {
 							//$$.traducao = "\n\t" + $1.traducao + " " + atributos.nome_temp + ";";
@@ -558,14 +556,20 @@ VAL			: '(' E_OP_OR ')'
 			}
 			| TK_LOGICO
 			{
-				$$.label = $1.traducao;
-				$$.traducao = "";
+				string nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
+
+				/** TODO Verificar se essa atribuição está certa
+				*/
+				$$.label = nome_variavel_temporaria;
+				$$.traducao = "\n\t" + nome_variavel_temporaria + " = " + $1.traducao + ";";
 				$$.tipo = $1.tipo;
 			}
 			| TK_NUM
 			{
-				$$.label = $1.label;
-				$$.traducao = "";
+				string nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
+
+				$$.label = nome_variavel_temporaria;
+				$$.traducao = "\n\t" + nome_variavel_temporaria + " = " + $1.traducao + ";";
 				$$.tipo = $1.tipo;
 			}
 			| TK_ID
@@ -582,26 +586,38 @@ VAL			: '(' E_OP_OR ')'
 			}
 			| TK_FLOAT
 			{
-				$$.label = $1.label;
-				$$.traducao = "";
-				$$.tipo = $1.tipo;	
+				string nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
+
+				$$.label = nome_variavel_temporaria;
+				$$.traducao = "\n\t" + nome_variavel_temporaria + " = " + $1.traducao + ";";
+				$$.tipo = $1.tipo;
 			}
 			| TK_LONG
 			{
-				$$.label = $1.label;
-				$$.traducao = "";
+				string nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
+
+				$$.label = nome_variavel_temporaria;
+				$$.traducao = "\n\t" + nome_variavel_temporaria + " = " + $1.traducao + ";";
 				$$.tipo = $1.tipo;	
 			}
 			| TK_DOUBLE
 			{
-				$$.label = $1.label;
-				$$.traducao = "";
+				string nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
+
+				$$.label = nome_variavel_temporaria;
+				$$.traducao = "\n\t" + nome_variavel_temporaria + " = " + $1.traducao + ";";
 				$$.tipo = $1.tipo;	
 			}
 			| TK_STRING
 			{
-				$$.label = "\"" + $1.label + "\"";
-				$$.traducao = "";
+				stringstream traducao;
+				string nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
+							
+				traducao << "\n\t" << $1.tipo_traducao << " " << nome_variavel_temporaria<< "[" << ($1.tamanho+1) << "]" << ";";
+				traducao << "\n\tstrcpy(" << nome_variavel_temporaria << ", \"" << $1.label << "\");";
+				
+				$$.traducao = traducao.str();
+				$$.label = nome_variavel_temporaria;
 				$$.tipo = $1.tipo;
 				$$.tamanho = $1.tamanho;
 			};
@@ -713,13 +729,12 @@ string gera_variavel_temporaria(string tipo, int tamanho, string nome) {
 	nome_temporario << "temp_" << tipo << "_";
 
 	if (!nome.empty()) {
-		nome_temporario << nome << "_";
+		nome_temporario << nome << "_" << contador;
 		nome_mapa = nome;
 	} else {
+		nome_temporario << "exp_" << contador;
 		nome_mapa = nome_temporario.str();
 	}
-
-	nome_temporario << contador;
 
 	contador++;
 

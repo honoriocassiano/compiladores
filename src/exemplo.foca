@@ -7,6 +7,7 @@ int main()
 	#int c=2;
 	#int d = c/a;
 	#a = c/d+b*a;
-	boolean a = 1 < 2 or false;
+	int a;
+	a = 2 + 3;
 	
 end
