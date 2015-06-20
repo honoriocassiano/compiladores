@@ -1,13 +1,6 @@
 int main()
 
-	# Erro: imprime nome das variaveis sem ser necessário
-	
-	#int a ;
-	#int b;
-	#int c=2;
-	#int d = c/a;
-	#a = c/d+b*a;
-	int a;
-	a = 2 + 3;
-	
+	boolean a;
+	a = 2 + 4.0 == 5.0 or 5.0 > 2 + 3.0;
+		
 end

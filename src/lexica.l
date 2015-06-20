@@ -32,14 +32,14 @@ ID {LETRA}({LETRA}|{NUM})*
 			}
 
 "begin"		{
-				yylval.traducao = yytext;
+				yylval.traducao = "{";
 				yylval.label = yytext;
 
 				return TK_BEGIN;
 			}
 
 "end"		{
-				yylval.traducao = yytext;
+				yylval.traducao = "}";
 				yylval.label = yytext;
 
 				return TK_END;
