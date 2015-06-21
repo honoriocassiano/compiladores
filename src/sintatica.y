@@ -580,7 +580,30 @@ E_NOT		: TK_NOT E_NOT
 				$$.tamanho = $1.tamanho;
 			};
 
-VAL			: '(' E_OP_OR ')'
+VAL			: '(' TIPO ')' VAL
+			{
+				string nome_variavel_temporaria_cast;
+
+				string chave = gera_chave($2.label, $4.tipo, "=");
+
+				if (mapa_cast.find(chave) != mapa_cast.end()) {
+					tipo_cast cast = mapa_cast[chave];
+
+					nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $4.tamanho);
+
+					$$.traducao = "\t" + $4.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $4.label + ";";
+
+					$$.tipo = cast.resultado;
+					$$.tamanho = $4.tamanho;
+					$$.label = nome_variavel_temporaria_cast;
+				} else {
+					cout << "Erro na linha " << nlinha <<": Não é possível fazer cast de um valor do tipo " << $2.tipo
+						<< " com um do tipo " << $4.tipo << endl << endl;
+
+					erro = true;
+				}
+			}
+			| '(' E_OP_OR ')'
 			{
 				$$.label = $2.label;
 				$$.traducao = $2.traducao;
