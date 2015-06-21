@@ -16,7 +16,7 @@ int	/	long	long	1
 int	/	double	double	1
 int	%	int	int	0
 int	%	long	int	1
-int	=	int	int	2
+int	=	int	int	0
 int	=	float	int	2
 int	=	long	int	2
 int	=	double	int	2
@@ -61,7 +61,7 @@ float	/	float	float	0
 float	/	long	float	2
 float	/	double	double	1
 float	=	int	float	2
-float	=	float	float	2
+float	=	float	float	0
 float	=	long	float	2
 float	=	double	float	2
 float	<	int	float	2
@@ -108,7 +108,7 @@ long	%	int	int	2
 long	%	long	long	0
 long	=	int	long	2
 long	=	float	long	2
-long	=	long	long	2
+long	=	long	long	0
 long	=	double	long	2
 long	<	int	long	2
 long	<	float	float	1
@@ -153,7 +153,7 @@ double	/	double	double	0
 double	=	int	double	2
 double	=	float	double	2
 double	=	long	double	2
-double	=	double	double	2
+double	=	double	double	0
 double	<	int	double	2
 double	<	float	double	2
 double	<	long	double	2

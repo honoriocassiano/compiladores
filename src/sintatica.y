@@ -204,30 +204,6 @@ ATRIBUICAO 	: TK_ID TK_ATR E_OP_OR
 						erro = true;
 					}
 
-					/*
-					if(variavel.tipo == $3.tipo) {
-
-						$$.traducao = "\t" + $3.traducao + "\n\t" + variavel.nome_temp + " " + $2.label + " " + $3.label + ";";
-
-					} else if(mapa_cast.find(chave) != mapa_cast.end()) {
-
-						tipo_cast cast = mapa_cast[chave];
-
-						if(cast.operando_cast == 2) {
-							$$.traducao = "\t" + $3.traducao + "\n\t" + variavel.nome_temp + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
-						} else {
-							cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $3.tipo
-							<< " a uma variável do tipo " << $1.tipo << endl << endl;
-							erro = true;
-						}
-					} else {
-
-						cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $3.tipo
-							<< " a uma variável do tipo " << $1.tipo << endl << endl;
-						erro = true;
-					}
-					*/
-
 				} else {
 					cout << "Erro na linha " << nlinha <<": Que porra de variável \"" << $1.label << "\" é essa?" << endl << endl;
 
@@ -252,24 +228,6 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 				$$.label = atributos.nome_temp;
 				$$.tipo = $1.label;
 
-				/*
-				if(atributos.tipo == $4.tipo) {
-					
-					if($1.label == "string") {
-						
-						stringstream traducao;
-						
-						traducao << $4.traducao << "\n\tstrcpy(" << atributos.nome_temp << ", " << $4.label << ");";
-						
-						$$.traducao = traducao.str();
-						
-						adiciona_biblioteca_cabecalho("string.h");
-						
-					} else {
-						$$.traducao = "\t" + $4.traducao + "\n\t" + atributos.nome_temp + " " + $3.label + " " + $4.label + ";";
-					}
-
-				} else */
 				if(mapa_cast.find(chave) != mapa_cast.end()) {
 
 					tipo_cast cast = mapa_cast[chave];
@@ -307,42 +265,6 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 
 					erro = true;
 				}
-
-				/*
-				if(atributos.tipo == $4.tipo) {
-					
-					if($1.label == "string") {
-						
-						stringstream traducao;
-						
-						traducao << $4.traducao << "\n\tstrcpy(" << atributos.nome_temp << ", " << $4.label << ");";
-						
-						$$.traducao = traducao.str();
-						
-						adiciona_biblioteca_cabecalho("string.h");
-						
-					} else {
-						$$.traducao = "\t" + $4.traducao + "\n\t" + atributos.nome_temp + " " + $3.label + " " + $4.label + ";";
-					}
-
-				} else if(mapa_cast.find(chave) != mapa_cast.end()) {
-
-					tipo_cast cast = mapa_cast[chave];
-
-					if(cast.operando_cast == 2) {
-						$$.traducao = "\t" + $4.traducao + "\n\t" + atributos.nome_temp + " " + $3.label + " " + "(" + cast.resultado + ") " + $4.label + ";";
-					} else {
-						cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $4.tipo
-							<< " a uma variável do tipo " << atributos.tipo << endl << endl;
-						erro = true;
-					}
-				} else {
-					cout << "Erro na linha " << nlinha <<": Não é possível atribuir um valor do tipo " << $4.tipo
-						<< " a uma variável do tipo " << atributos.tipo << endl << endl;
-
-					erro = true;
-				}
-				*/
 			}
 			| TIPO TK_ID
 			{
@@ -376,23 +298,28 @@ E_OP_OR		: E_OP_OR TK_OR E_OP_AND
 
 					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
 
-					switch(cast.operando_cast) {
-						case 0:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
+					if (cast.operando_cast == 0) {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
 
-							break;
-						case 1:
-							$$.traducao = "\t" + $3.traducao + "\n\t" + "(" + cast.resultado + ") " +  nome_variavel_temporaria + " " + $2.label + " " + $3.label + ";";
-							break;
-						case 2:
-							$$.traducao = "\t" + $3.traducao + "\n\t" + nome_variavel_temporaria + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
-							break;
-						default:
-							cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
-							<< " com um do tipo " << $3.tipo << endl << endl;
+					} else if (cast.operando_cast == 1) { 
 
-							erro = true;
-							break;
+						string nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $1.tamanho);
+
+						$$.traducao = "\t" + $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $1.label + ";\n";
+
+						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + nome_variavel_temporaria_cast + " " + $2.traducao + " " + $3.label + ";";
+
+					} else if (cast.operando_cast == 2) { 
+
+						string nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $3.tamanho);
+
+						$$.traducao = "\t" + $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $3.label + ";\n";
+
+						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + nome_variavel_temporaria_cast + ";";
+
+					} else {
+						cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						erro = true;
 					}
 
 				} else {
@@ -401,23 +328,6 @@ E_OP_OR		: E_OP_OR TK_OR E_OP_AND
 
 					erro = true;
 				}
-
-				/*
-				if( ($1.tipo == "boolean") && ($1.tipo == $3.tipo)) {
-
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
-
-					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
-
-					$$.tipo = "boolean";
-
-				} else {
-					cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
-						<< " com um do tipo " << $3.tipo << endl << endl;
-
-					erro = true;
-				}
-				*/
 
 				$$.label = nome_variavel_temporaria;
 			}
@@ -441,23 +351,28 @@ E_OP_AND	: E_OP_AND TK_AND E_REL
 
 					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
 
-					switch(cast.operando_cast) {
-						case 0:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
+					if (cast.operando_cast == 0) {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
 
-							break;
-						case 1:
-							$$.traducao = "\t" + $3.traducao + "\n\t" + "(" + cast.resultado + ") " +  nome_variavel_temporaria + " " + $2.label + " " + $3.label + ";";
-							break;
-						case 2:
-							$$.traducao = "\t" + $3.traducao + "\n\t" + nome_variavel_temporaria + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
-							break;
-						default:
-							cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
-							<< " com um do tipo " << $3.tipo << endl << endl;
+					} else if (cast.operando_cast == 1) { 
 
-							erro = true;
-							break;
+						string nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $1.tamanho);
+
+						$$.traducao = "\t" + $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $1.label + ";\n";
+
+						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + nome_variavel_temporaria_cast + " " + $2.traducao + " " + $3.label + ";";
+
+					} else if (cast.operando_cast == 2) { 
+
+						string nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $3.tamanho);
+
+						$$.traducao = "\t" + $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $3.label + ";\n";
+
+						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + nome_variavel_temporaria_cast + ";";
+
+					} else {
+						cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						erro = true;
 					}
 
 				} else {
@@ -466,22 +381,6 @@ E_OP_AND	: E_OP_AND TK_AND E_REL
 
 					erro = true;
 				}
-				/*
-				if( ($1.tipo == "boolean") && ($1.tipo == $3.tipo)) {
-
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
-
-					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
-
-					$$.tipo = "boolean";
-
-				} else {
-					cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
-						<< " com um do tipo " << $3.tipo << endl << endl;
-
-					erro = true;
-				}
-				*/
 
 				$$.label = nome_variavel_temporaria;
 			}
@@ -505,21 +404,29 @@ E_REL		: E TK_REL_OP E
 					//TODO verificar se o tamanho está certo
 					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
 
-					switch(cast.operando_cast) {
-						case 0:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
-							break;
-						case 1:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + "(" + $3.tipo + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
-							break;
-						case 2:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + $1.tipo + ") " + $3.label + ";";
-							break;
-						default:
-							cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo << " com um do tipo " << $3.tipo << endl << endl;
+					if(cast.operando_cast == 0) {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
+					
+					} else if(cast.operando_cast == 1) {
 
-							erro = true;
-							break;
+						string nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $1.tamanho);
+
+						$$.traducao = "\t" + $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $1.label + ";\n";
+
+						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + nome_variavel_temporaria_cast + " " + $2.traducao + " " + $3.label + ";";
+
+					} else if (cast.operando_cast == 2) {
+
+						string nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $3.tamanho);
+
+						$$.traducao = "\t" + $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $3.label + ";\n";
+
+						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + nome_variavel_temporaria_cast + ";";
+
+					} else{
+						cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo << " com um do tipo " << $3.tipo << endl << endl;
+
+						erro = true;
 					}
 
 					$$.tipo = "boolean";
@@ -530,39 +437,6 @@ E_REL		: E TK_REL_OP E
 
 					erro = true;
 				}
-				/*
-				if (mapa_cast.find(chave) != mapa_cast.end()) {
-					tipo_cast cast = mapa_cast[chave];
-
-					//TODO verificar se o tamanho está certo
-					
-					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
-
-					if(cast.operando_cast == 1) {
-						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + "(" + $3.tipo + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
-					} else {
-						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + $1.tipo + ") " + $3.label + ";";
-					}
-
-					$$.tipo = cast.resultado;
-
-				} else if($1.tipo == $3.tipo) {
-
-					//TODO verificar se o tamanho está certo
-					
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, 0);
-
-					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
-
-					$$.tipo = "boolean";
-
-				} else {
-					cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
-						<< " com um do tipo " << $3.tipo << endl << endl;
-
-					erro = true;
-				}
-				*/
 
 				$$.label = nome_variavel_temporaria;
 			}
@@ -586,19 +460,28 @@ E 			: E TK_ARIT_OP_S E_TEMP
 					//TODO verificar se o tamanho está certo
 					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
 
-					switch(cast.operando_cast) {
-						case 0:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
-							break;
-						case 1:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
-							break;
-						case 2:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
-							break;
-						default:
-							cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
-							erro = true;
+					if (cast.operando_cast == 0) {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
+
+					} else if (cast.operando_cast == 1) { 
+
+						string nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $1.tamanho);
+
+						$$.traducao = "\t" + $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $1.label + ";\n";
+
+						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + nome_variavel_temporaria_cast + " " + $2.traducao + " " + $3.label + ";";
+
+					} else if (cast.operando_cast == 2) { 
+
+						string nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $3.tamanho);
+
+						$$.traducao = "\t" + $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $3.label + ";\n";
+
+						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + nome_variavel_temporaria_cast + ";";
+
+					} else {
+						cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						erro = true;
 					}
 
 					$$.tipo = cast.resultado;
@@ -607,40 +490,6 @@ E 			: E TK_ARIT_OP_S E_TEMP
 					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
 					erro = true;
 				}
-				/*
-				if (mapa_cast.find(chave) != mapa_cast.end()) {
-					tipo_cast cast = mapa_cast[chave];
-
-					//TODO verificar se o tamanho está certo
-					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
-
-					switch(cast.operando_cast) {
-						case 1:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
-							break;
-						case 2:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
-							break;
-						default:
-							cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
-							erro = true;
-					}
-
-					$$.tipo = cast.resultado;
-
-				} else if($1.tipo == $3.tipo) {
-
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, 0);
-					
-					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
-
-					$$.tipo = $1.tipo;
-
-				} else {
-					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
-					erro = true;
-				}
-				*/
 
 				$$.label = nome_variavel_temporaria;
 			}
@@ -663,20 +512,28 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 
 					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
 
-					switch(cast.operando_cast) {
-						case 0:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
-							break;
-						case 1:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
-							break;
-						case 2:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
-							break;
-						default:
-							cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
-							erro = true;
-							break;
+					if (cast.operando_cast == 0) {
+						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
+
+					} else if (cast.operando_cast == 1) { 
+
+						string nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $1.tamanho);
+
+						$$.traducao = "\t" + $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $1.label + ";\n";
+
+						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + nome_variavel_temporaria_cast + " " + $2.traducao + " " + $3.label + ";";
+
+					} else if (cast.operando_cast == 2) { 
+
+						string nome_variavel_temporaria_cast = gera_variavel_temporaria(cast.resultado, $3.tamanho);
+
+						$$.traducao = "\t" + $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria_cast + " " + "= " + "(" + cast.resultado + ") " + $3.label + ";\n";
+
+						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + nome_variavel_temporaria_cast + ";";
+
+					} else {
+						cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						erro = true;
 					}
 
 					$$.tipo = cast.resultado;
@@ -686,40 +543,6 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
 					erro = true;
 				}
-				/*
-				if (mapa_cast.find(chave) != mapa_cast.end()) {
-					tipo_cast cast = mapa_cast[chave];
-
-					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
-
-					switch(cast.operando_cast) {
-						case 1:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + "(" + cast.resultado + ") " + $1.label + " " + $2.label + " " + $3.label + ";";
-							break;
-						case 2:
-							$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + "(" + cast.resultado + ") " + $3.label + ";";
-							break;
-						default:
-							cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
-							erro = true;
-					}
-
-					$$.tipo = cast.resultado;
-
-				} else if($1.tipo == $3.tipo) {
-
-					nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, 0);
-					
-					$$.tipo = $1.tipo;
-					
-					$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.label + " " + $3.label + ";";
-
-				} else {
-
-					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
-					erro = true;
-				}
-				*/
 
 				$$.label = nome_variavel_temporaria;
 			}

@@ -25,7 +25,7 @@ def verifica_cast():
 				if i in tipos_numericos and k in tipos_numericos:
 					
 					if j in operacoes_atribuicao:
-						if i == j:
+						if i == k:
 							yield (i, j, k, i, 0)
 						# Faz cast na atribuição independentemente dos tipos numéricos
 						else:
