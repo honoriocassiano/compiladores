@@ -1,6 +1,5 @@
 int main()
 
-	boolean a;
-	a = 2 + 4.0 == 5.0 or 5.0 > 2 + 3.0;
-		
+	boolean a = true and 2 > 3 or 0.1 == 2;
+
 end
