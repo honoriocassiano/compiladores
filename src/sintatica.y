@@ -69,6 +69,9 @@ vector< map<string, info_variavel> > pilha_contexto;
 // Função para recuperação de variáveis
 info_variavel *recupera_variavel(string nome);
 
+// Função para recuperar variável em um determinado escopo
+info_variavel *recupera_variavel(string nome, map<string, info_variavel> mapa_contexto);
+
 // Função para recuperar o escopo atual
 map<string, info_variavel> recupera_escopo_atual();
 
@@ -138,7 +141,7 @@ S 			: INICIO_ESCOPO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_NO_B
 
 				if(!erro) {
 					//cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
-					cout << cabecalho.str() << "\nint main(void)\n" << $6.traducao << "\n\n\treturn 0;\n}" << endl; 
+					cout << cabecalho.str() << "\nint main(void)\n" << $6.traducao << "\n\treturn 0;\n}" << endl; 
 				} 
 				//myfile.close();
 
@@ -179,11 +182,36 @@ COMANDOS	: COMANDO ';' COMANDOS
 			{
 				$$.traducao = $1.traducao + $3.traducao;
 			}
+			| INICIO_ESCOPO EST_BLOCO COMANDOS
+			{
+				stringstream variaveis;
+
+				std::map<string, info_variavel> mapa_variavel = recupera_escopo_atual();
+
+				for (std::map<string, info_variavel>::iterator it=mapa_variavel.begin(); it!=mapa_variavel.end(); ++it) {
+    				variaveis << "\t" << mapa_traducao_tipo[it->second.tipo] << " " << it->second.nome_temp;
+
+    				if(it->second.tipo == "string") {
+    					variaveis << "[" << (it->second.tamanho + 1) << "]";
+    				}
+
+    				variaveis << ";\n";
+    			}
+
+				$$.traducao = "\n\n" + variaveis.str() + $2.traducao + $3.traducao + "\n";
+			}
 			|
 			{
 				$$.traducao = "";
 				$$.label = "";
 			};
+
+EST_BLOCO	: TK_BEGIN COMANDOS TK_END
+			{
+				$$.traducao = $2.traducao;
+
+				finaliza_escopo();
+			}
 
 COMANDO 	: DECLARACAO
 			{
@@ -657,7 +685,7 @@ VAL			: '(' TIPO ')' VAL
 				info_variavel *variavel = recupera_variavel($1.label);
 
 				if(!variavel) {
-					cout << "Erro na linha " << nlinha <<": Que porra de variável \"" << $1.label << "\" é essa?" << endl << endl;
+					cout << "Erro na linha " << nlinha <<": Variável \"" << $1.label << "\" não declarada neste escopo" << endl << endl;
 
 					erro = true;
 
@@ -824,7 +852,7 @@ string gera_variavel_temporaria(string tipo, int tamanho, string nome) {
 	contador++;
 
 	info_variavel atributos = {tipo, nome_temporario.str(), tamanho};
-	if(!recupera_variavel(nome_mapa)) {
+	if(!recupera_variavel(nome_mapa, pilha_contexto.back())) {
 
 		pilha_contexto.back()[nome_mapa] = atributos;
 
@@ -898,11 +926,19 @@ map<string, info_variavel> recupera_escopo_atual() {
 info_variavel *recupera_variavel(string nome) {
 	for (int i = pilha_contexto.size() - 1; i >= 0; i--) {
 
-		map<string, info_variavel> mapa_contexto = pilha_contexto[i];
-		
-		if(mapa_contexto.find(nome) != mapa_contexto.end()) {
-			return &mapa_contexto[nome];
+		info_variavel *variavel = recupera_variavel(nome, pilha_contexto[i]);
+
+		if(variavel) {
+			return variavel;
 		}
+	}
+
+	return (info_variavel *) 0;
+}
+
+info_variavel *recupera_variavel(string nome, map<string, info_variavel> mapa_contexto) {
+	if(mapa_contexto.find(nome) != mapa_contexto.end()) {
+		return &mapa_contexto[nome];
 	}
 
 	return (info_variavel *) 0;

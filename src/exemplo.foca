@@ -1,6 +1,15 @@
 int main()
-
-	int a = 1;
+	
 	int a;
+
+	begin
+		float a = 2;
+
+		begin
+			string a = "1.4";
+		end
+	end
+
+	a = 5;
 
 end
