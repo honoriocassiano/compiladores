@@ -1,5 +1,6 @@
 int main()
 
-	float a = (double)(float)(1+1);
+	int a = 1;
+	int a;
 
 end
