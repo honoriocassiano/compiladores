@@ -1,15 +1,9 @@
 int main()
 	
-	int a;
-
-	begin
-		float a = 2;
-
-		begin
-			string a = "1.4";
-		end
+	if(true)
+		int d;
+	elsif(false)
+		float b;
 	end
-
-	a = 5;
 
 end

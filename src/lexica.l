@@ -92,6 +92,27 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_TIPO_STRING;
 			}
 
+"if"		{
+				yylval.label = yytext;
+				yylval.traducao = yytext;
+
+				return TK_IF;
+			}
+
+"elsif"		{
+				yylval.label = yytext;
+				yylval.traducao = "if";
+
+				return TK_ELSIF;
+			}
+
+"else"		{
+				yylval.label = yytext;
+				yylval.traducao = "if";
+
+				return TK_ELSE;
+			}
+
 [(){}[\];,]	{ return *yytext; }
 
 "+"			{
