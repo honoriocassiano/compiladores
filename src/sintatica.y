@@ -47,6 +47,14 @@ typedef struct _tipo_cast
 	int operando_cast;
 } tipo_cast;
 
+// Estrutura para guardar pares de labels (inicio, fim)
+
+typedef struct _conjunto_label
+{
+	string inicio;
+	string fim;
+} conjunto_label;
+
 // Variável para o cabeçalho
 stringstream cabecalho;
 
@@ -58,6 +66,9 @@ map<string, string> mapa_traducao_tipo;
 
 // Mapa de traduções de tipo
 map<string, string> mapa_valor_padrao;
+
+// Pilha de labels
+vector<conjunto_label> pilha_label;
 
 // Pilha de contextos
 vector< map<string, info_variavel> > pilha_contexto;
@@ -90,6 +101,17 @@ void gera_mapa_traducao_tipo();
 // Função para gerar o mapa de traduções de tipo
 void gera_mapa_valor_padrao();
 
+// Função para gerar labels
+conjunto_label gera_label(string nome_estrutura, bool usar_ultima=false);
+
+// Função para recuperar a última label
+conjunto_label recupera_label();
+
+// Função para excluir a última label
+void exclui_label();
+
+string gera_declaracoes_variaveis();
+
 string gera_chave(string operador1, string operador2, string operacao);
 
 // Função para gerar nomes temporários para as variáveis
@@ -119,6 +141,8 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %token TK_AND TK_OR
 
+%token TK_IF TK_ELSE TK_ELSIF
+
 %start S
 
 %left TK_SOMA TK_SUB
@@ -126,7 +150,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %%
 
-S 			: INICIO_ESCOPO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_NO_B
+S 			: INI_ESCOPO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 			{
 				//ofstream myfile;
 				//myfile.open ("example.c");
@@ -141,25 +165,30 @@ S 			: INICIO_ESCOPO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_NO_B
 
 				if(!erro) {
 					//cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
-					cout << cabecalho.str() << "\nint main(void)\n" << $6.traducao << "\n\treturn 0;\n}" << endl; 
+					cout << cabecalho.str() << "\nint main(void)\n{" << $6.traducao << "\n\treturn 0;\n}" << endl; 
 				} 
 				//myfile.close();
 
 				finaliza_escopo();
 			};
 
-INICIO_ESCOPO:
+INI_ESCOPO:
 			{
 				inicializa_escopo();
 				$$.traducao = "";
 				$$.label = "";
 			}
 
-BLOCO_NO_B	: INICIO_ESCOPO COMANDOS TK_END
+INI_ESCOPO_EST: INI_ESCOPO
+			{
+				gera_label("label");
+			}
+
+BLOCO_SEM_B	: INI_ESCOPO COMANDOS TK_END
 			{
 				stringstream variaveis;
 
-				std::map<string, info_variavel> mapa_variavel = recupera_escopo_atual();
+				map<string, info_variavel> mapa_variavel = recupera_escopo_atual();
 
 				for (std::map<string, info_variavel>::iterator it=mapa_variavel.begin(); it!=mapa_variavel.end(); ++it) {
     				variaveis << "\t" << mapa_traducao_tipo[it->second.tipo] << " " << it->second.nome_temp;
@@ -172,7 +201,7 @@ BLOCO_NO_B	: INICIO_ESCOPO COMANDOS TK_END
     			}
 
     			// TODO Adicionar o fecha chaves aqui depois
-				$$.traducao = "{\n" + variaveis.str() + $2.traducao;
+				$$.traducao = "\n" + variaveis.str() + $2.traducao;
 
 				finaliza_escopo();
 
@@ -182,7 +211,17 @@ COMANDOS	: COMANDO ';' COMANDOS
 			{
 				$$.traducao = $1.traducao + $3.traducao;
 			}
-			| INICIO_ESCOPO EST_BLOCO COMANDOS
+			| INI_ESCOPO EST_BLOCO
+			{
+				$$.traducao = $2.traducao;
+			}
+			|
+			{
+				$$.traducao = "";
+				$$.label = "";
+			};
+
+EST_BLOCO	: BLOCO_COM_B COMANDOS
 			{
 				stringstream variaveis;
 
@@ -198,15 +237,95 @@ COMANDOS	: COMANDO ';' COMANDOS
     				variaveis << ";\n";
     			}
 
-				$$.traducao = "\n\n" + variaveis.str() + $2.traducao + $3.traducao + "\n";
+				$$.traducao = "\n\n" + variaveis.str() + $1.traducao + $2.traducao + "\n";
+			}
+			| INI_ESCOPO_EST TK_IF '(' E_OP_OR ')' COMANDOS EST_ELSE TK_END COMANDOS
+			{
+				if($4.tipo == "boolean") {
+
+					stringstream traducao;
+
+					//exclui_label();
+
+					conjunto_label label_atual = recupera_label(); //gera_label($1.label);
+
+					traducao << $4.traducao << "\n" << label_atual.inicio << ":\n\t" << $2.traducao << "(!(" << $4.label << "))" << " goto " << $7.label << ";\n";//<< label_atual.fim << ";\n";
+					traducao << gera_declaracoes_variaveis();
+					traducao << $6.traducao << "\n";
+					traducao << "\tgoto " << label_atual.fim << ";\n";
+					//traducao << "\tgoto " << recupera_label().fim << ";\n";
+					traducao << $7.traducao << "\n";
+
+					//*****************
+					traducao << $9.traducao;
+					//*****************
+
+					$$.traducao = traducao.str();
+
+					exclui_label();
+
+				} else {
+					cout << "Erro na linha " << nlinha <<": A condição utilizada na estrutura do if espera um valor do tipo boolean, mas o valor utilizado foi do tipo " + $4.tipo + "\n";
+
+					erro = true;
+				}
+			};
+
+EST_ELSE	: INI_ESCOPO_EST TK_ELSIF '(' E_OP_OR ')' COMANDOS EST_ELSE
+			{
+				if($4.tipo == "boolean") {
+
+					stringstream traducao;
+
+					//exclui_label();
+
+					conjunto_label label_atual = gera_label($2.label, true);
+
+					traducao << $4.traducao << "\n" << label_atual.inicio << ":\n\t" << $2.traducao << "(!(" << $4.label << "))" << " goto " << label_atual.fim << ";\n";
+					traducao << gera_declaracoes_variaveis();
+					traducao << $6.traducao << "\n";
+					traducao << "\tgoto " << label_atual.fim << ";\n";
+					//traducao << "\n" << label_atual.fim << ":\n";
+					traducao << $7.traducao << "\n";
+
+					$$.traducao = traducao.str();
+
+					$$.label = label_atual.fim;
+
+					exclui_label();
+
+				} else {
+					cout << "Erro na linha " << nlinha <<": A condição utilizada na estrutura do if espera um valor do tipo boolean, mas o valor utilizado foi do tipo " + $4.tipo + "\n";
+
+					erro = true;
+				}
+			}
+			| INI_ESCOPO_EST TK_ELSE COMANDOS
+			{
+				stringstream traducao;
+
+				//exclui_label();
+
+				conjunto_label label_atual = gera_label($2.label, true);
+
+				traducao <<  label_atual.inicio << ":" << "\n";
+				traducao << gera_declaracoes_variaveis();
+				traducao << $3.traducao << "\n";
+				traducao << label_atual.fim << ":" << "\n";
+
+				$$.traducao = traducao.str();
+
+				$$.label = label_atual.fim;
+
+				exclui_label();
 			}
 			|
 			{
-				$$.traducao = "";
-				$$.label = "";
+				$$.label = recupera_label().fim;
+				$$.traducao = recupera_label().fim + ":\n";
 			};
 
-EST_BLOCO	: TK_BEGIN COMANDOS TK_END
+BLOCO_COM_B	: TK_BEGIN COMANDOS TK_END
 			{
 				$$.traducao = $2.traducao;
 
@@ -942,6 +1061,72 @@ info_variavel *recupera_variavel(string nome, map<string, info_variavel> mapa_co
 	}
 
 	return (info_variavel *) 0;
+}
+
+int contador_label = 0;
+
+conjunto_label gera_label(string nome_estrutura, bool usar_ultima) {
+
+	string inicio;
+	string fim;
+
+	if(usar_ultima) {
+
+		if(pilha_label.size() > 0) {
+			conjunto_label conjunto_anterior = pilha_label.back();
+
+			inicio = conjunto_anterior.fim;
+			fim = "end_" + inicio;
+		} else {
+
+			cout << nome_estrutura << endl << endl;
+
+			cout << "Erro interno na linha " << nlinha << ": Nenhum label foi criado ainda" << endl << endl;
+			erro = true;
+		}
+	} else {
+
+		stringstream temp;
+
+		temp << nome_estrutura << "_" << contador_label;
+
+		inicio = temp.str();
+		fim = "end_" + inicio;
+
+		contador_label++;
+	}
+
+	conjunto_label label_atual = {inicio, fim};
+
+	pilha_label.push_back(label_atual);
+
+	return label_atual;
+}
+
+conjunto_label recupera_label() {
+	return pilha_label.back();
+}
+
+void exclui_label() {
+	pilha_label.pop_back();
+}
+
+string gera_declaracoes_variaveis() {
+	stringstream variaveis;
+
+	map<string, info_variavel> mapa_variavel = recupera_escopo_atual();
+
+	for (std::map<string, info_variavel>::iterator it=mapa_variavel.begin(); it!=mapa_variavel.end(); ++it) {
+		variaveis << "\t" << mapa_traducao_tipo[it->second.tipo] << " " << it->second.nome_temp;
+
+		if(it->second.tipo == "string") {
+			variaveis << "[" << (it->second.tamanho + 1) << "]";
+		}
+
+		variaveis << ";\n";
+	}
+
+	return variaveis.str();
 }
 
 void inicializa_escopo() {
