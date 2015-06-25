@@ -182,4 +182,5 @@ boolean	=	boolean	boolean	0
 boolean	and	boolean	boolean	0
 boolean	or	boolean	boolean	0
 boolean	not	boolean	boolean	0
+string	+	string	string	0
 string	=	string	string	0

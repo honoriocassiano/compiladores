@@ -1,9 +1,6 @@
 int main()
 	
-	if(true)
-		int d;
-	elsif(false)
-		float b;
-	end
+	string a;
+	a = "ba" + "c";
 
 end

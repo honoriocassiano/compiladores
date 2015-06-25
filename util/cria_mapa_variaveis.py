@@ -105,10 +105,9 @@ def verifica_cast():
 						yield (i, j, k, i, 0)
 						"""
 						Para a operação de concatenação
-
+						"""
 					elif j == "+":
 						yield (i, j, k, i, 0)
-						"""
 					else:
 						#yield (i, j, k, "null", -1)
 						continue
