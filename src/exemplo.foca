@@ -1,9 +1,17 @@
 int main()
 	
+	string a;
+
 	if(true)
-		int d;
+		int a;
+
+		a = 5;
 	elsif(false)
-		float b;
+		double a = 1.0d;
+	else
+		boolean a = true;
 	end
+
+	a = "2";
 
 end
