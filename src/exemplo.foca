@@ -1,17 +1,6 @@
 int main()
 	
 	string a;
-
-	if(true)
-		int a;
-
-		a = 5;
-	elsif(false)
-		double a = 1.0d;
-	else
-		boolean a = true;
-	end
-
-	a = "2";
+	a = "ba" + "c";
 
 end

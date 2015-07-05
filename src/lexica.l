@@ -17,7 +17,7 @@ REAL {NUM}+("."{NUM}+)?
 LONG {DIGITO}+[lL]
 DOUBLE {NUM}+("."{NUM}+)[dD]
 CHAR \'({LETRA}|{NUM})\'
-STRING "\"".*"\""
+STRING \"[^"\n]*["]
 ID {LETRA}({LETRA}|{NUM})*
 
 %%
