@@ -1,9 +1,10 @@
 int main()
 
-	int a;
-	
-	while(true)
-		a = a + 1;
+	int i;
+	int b;
+
+	for(i = 0; i < 4; i = i+1)
+		b = 5;
 	end
 
 end

@@ -120,6 +120,13 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_WHILE;
 			}
 
+"for"		{
+				yylval.label = yytext;
+				yylval.traducao = "if";
+
+				return TK_FOR;
+			}
+
 [(){}[\];,]	{ return *yytext; }
 
 "+"			{

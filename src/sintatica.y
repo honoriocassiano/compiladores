@@ -155,7 +155,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 %token TK_AND TK_OR
 
 %token TK_IF TK_ELSE TK_ELSIF
-%token TK_WHILE
+%token TK_WHILE TK_FOR
 
 %start S
 
@@ -244,6 +244,43 @@ EST_BLOCO	: BLOCO_COM_B
 			| EST_WHILE TK_END
 			{
 				$$.traducao = $1.traducao;
+			}
+			| EST_FOR TK_END
+			{
+				$$.traducao = $1.traducao;
+			}
+
+
+
+EST_FOR		: TK_FOR '(' ATRIBUICAO ';' E_OP_OR ';' ATRIBUICAO ')' EST_BLOCO_P
+			{
+				if($5.tipo == "boolean") {
+					stringstream traducao;
+
+					traducao << "\t" << $3.traducao << endl;
+
+					conjunto_label label_atual =  gera_label($1.label, false, true);
+
+					traducao << label_atual.inicio << ":\n";
+
+					traducao << $5.traducao << "\n\t" << $1.traducao << "(!(" << $5.label << "))";
+					traducao << " goto " << label_atual.fim << ";\n";
+
+					traducao << $9.traducao;
+
+					traducao << $7.traducao;
+
+					traducao << "\n\tgoto " << label_atual.inicio << ";\n";
+
+					traducao << "\n" << label_atual.fim << ":\n";
+
+					$$.traducao = traducao.str();
+
+				} else {
+					cout << "Erro na linha " << nlinha <<": A condição utilizada na estrutura do for espera um valor do tipo boolean, mas o valor utilizado foi do tipo " + $3.tipo + "\n";
+
+					erro = true;
+				}
 			}
 
 EST_WHILE	: TK_WHILE '(' E_OP_OR ')' EST_BLOCO_P
@@ -479,7 +516,7 @@ COMANDO 	: E_OP_OR
 				$$.traducao = $1.traducao;
 			};
 
-DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
+DECLARACAO	: TIPO TK_ID TK_ATR DIREITA_ATR
 			{
 				string nome_temp = gera_variavel_temporaria($1.label, $4.tamanho, $2.label);
 
