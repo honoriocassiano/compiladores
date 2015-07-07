@@ -1,6 +1,8 @@
 int main()
 	
 	string a;
-	a = "ba" + "c";
+	string b;
+
+	a = b = "1";
 
 end

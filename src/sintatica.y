@@ -367,7 +367,22 @@ COMANDO 	: DECLARACAO
 				$$.traducao = $1.traducao;
 			};
 
-ATRIBUICAO 	: TK_ID TK_ATR E_OP_OR
+DIREITA_ATR	: ATRIBUICAO
+			{
+				$$.label = $1.label;
+				$$.tipo = $1.tipo;
+				$$.traducao = $1.traducao;
+				$$.tamanho = $1.tamanho;
+			}
+			| E_OP_OR
+			{
+				$$.label = $1.label;
+				$$.tipo = $1.tipo;
+				$$.traducao = $1.traducao;
+				$$.tamanho = $1.tamanho;
+			}
+
+ATRIBUICAO 	: TK_ID TK_ATR DIREITA_ATR
 			{
 
 				info_variavel *ptr_variavel = recupera_variavel($1.label);
@@ -446,7 +461,7 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 						
 								stringstream traducao;
 								
-								traducao << $4.traducao << "\n\tstrcpy(" << atributos.nome_temp << ", " << $4.label << ");";
+								traducao << $4.traducao << "\tstrcpy(" << atributos.nome_temp << ", " << $4.label << ");\n";
 								
 								$$.traducao = traducao.str();
 								
@@ -485,7 +500,7 @@ DECLARACAO	: TIPO TK_ID TK_ATR E_OP_OR
 				$$.label = atributos.nome_temp;
 				
 				if($1.label == "string") {
-					$$.traducao = "\n\tstrcpy(" + atributos.nome_temp + ", " + mapa_valor_padrao[$1.label] + ");";
+					$$.traducao = "\tstrcpy(" + atributos.nome_temp + ", " + mapa_valor_padrao[$1.label] + ");\n";
 					
 					adiciona_biblioteca_cabecalho("string.h");
 				} else {
@@ -898,7 +913,7 @@ VAL			: '(' TIPO ')' VAL
 				stringstream traducao;
 				string nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, $1.tamanho);
 							
-				traducao << "\n\tstrcpy(" << nome_variavel_temporaria << ", \"" << $1.label << "\");";
+				traducao << "\n\tstrcpy(" << nome_variavel_temporaria << ", \"" << $1.label << "\");\n";
 				
 				$$.traducao = traducao.str();
 				$$.label = nome_variavel_temporaria;
