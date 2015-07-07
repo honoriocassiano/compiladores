@@ -76,6 +76,9 @@ map<string, string> mapa_valor_padrao;
 // Pilha de labels
 vector<conjunto_label> pilha_label;
 
+// Pilha de labels para loops
+vector<conjunto_label> pilha_label_loop;
+
 // Pilha de contextos
 vector< map<string, info_variavel> > pilha_contexto;
 
@@ -110,14 +113,16 @@ void gera_mapa_traducao_tipo();
 void gera_mapa_valor_padrao();
 
 // Função para gerar labels
-conjunto_label gera_label(string nome_estrutura, bool usar_ultima=false);
+conjunto_label gera_label(string nome_estrutura, bool usar_ultima=false, bool loop=false);
 
 // Função para recuperar a última label
-conjunto_label recupera_label();
+conjunto_label recupera_label(bool loop=false);
 
 // Função para excluir a última label
-void exclui_label();
+void exclui_label(bool loop=false);
 
+
+// Função para gerar declaração de variáveis
 string gera_declaracoes_variaveis();
 
 string gera_chave(string operador1, string operador2, string operacao);
@@ -150,6 +155,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 %token TK_AND TK_OR
 
 %token TK_IF TK_ELSE TK_ELSIF
+%token TK_WHILE
 
 %start S
 
@@ -234,6 +240,39 @@ EST_BLOCO	: BLOCO_COM_B
 			| EST_ELSE TK_END
 			{
 				$$.traducao = $1.traducao;
+			}
+			| EST_WHILE TK_END
+			{
+				$$.traducao = $1.traducao;
+			}
+
+EST_WHILE	: TK_WHILE '(' E_OP_OR ')' EST_BLOCO_P
+			{
+				if($3.tipo == "boolean") {
+
+					stringstream traducao;
+
+					conjunto_label label_atual =  gera_label($1.label, false, true);
+
+					traducao << $3.traducao << endl;
+					traducao << label_atual.inicio << ":\n";
+
+					traducao << "\t" << $1.traducao << "(!(" << $3.label << "))";
+					traducao << " goto " << label_atual.fim << ";\n";
+
+					traducao << $5.traducao << endl;
+
+					traducao << "\tgoto " << label_atual.inicio << ";\n";
+					traducao << label_atual.fim << ":\n";
+
+					$$.traducao = traducao.str();
+
+
+				} else {
+					cout << "Erro na linha " << nlinha <<": A condição utilizada na estrutura do while espera um valor do tipo boolean, mas o valor utilizado foi do tipo " + $3.tipo + "\n";
+
+					erro = true;
+				}
 			}
 
 EST_ELSE	: EST_ELSIF TK_ELSE EST_BLOCO_P
@@ -1139,58 +1178,86 @@ info_variavel *recupera_variavel(string nome, map<string, info_variavel> mapa_co
 
 int contador_label = 0;
 
-conjunto_label gera_label(string nome_estrutura, bool usar_ultima) {
+conjunto_label gera_label(string nome_estrutura, bool usar_ultima, bool loop) {
 
 	string inicio;
 	string proximo;
 	string fim;
 
-	if(usar_ultima) {
+	conjunto_label label_atual;
 
-		if(pilha_label.size() > 0) {
-			conjunto_label conjunto_anterior = pilha_label.back();
+	if(!loop) {
+		if(usar_ultima) {
 
-			//inicio = conjunto_anterior.fim;
-			inicio = conjunto_anterior.proximo;
-			proximo = "prox_" + inicio;
-			//fim = "end_" + inicio;
-			fim = conjunto_anterior.fim;
+			if(pilha_label.size() > 0) {
+				conjunto_label conjunto_anterior = pilha_label.back();
 
-			pilha_label.pop_back();
+				//inicio = conjunto_anterior.fim;
+				inicio = conjunto_anterior.proximo;
+				proximo = "prox_" + inicio;
+				//fim = "end_" + inicio;
+				fim = conjunto_anterior.fim;
 
+				pilha_label.pop_back();
+
+			} else {
+
+				cout << nome_estrutura << endl << endl;
+
+				cout << "Erro interno na linha " << nlinha << ": Nenhum label foi criado ainda" << endl << endl;
+				erro = true;
+			}
 		} else {
 
-			cout << nome_estrutura << endl << endl;
+			stringstream temp;
 
-			cout << "Erro interno na linha " << nlinha << ": Nenhum label foi criado ainda" << endl << endl;
-			erro = true;
+			temp << nome_estrutura << "_" << contador_label;
+
+			inicio = temp.str();
+			proximo = "prox_" + inicio;
+			fim = "end_" + inicio;
+
+			contador_label++;
 		}
-	} else {
 
+		label_atual = (conjunto_label) {inicio, proximo, fim};
+
+		pilha_label.push_back(label_atual);
+
+	} else {
 		stringstream temp;
 
 		temp << nome_estrutura << "_" << contador_label;
 
 		inicio = temp.str();
-		proximo = "prox_" + inicio;
 		fim = "end_" + inicio;
 
 		contador_label++;
+
+		label_atual = (conjunto_label) {inicio, proximo, fim};
+
+		pilha_label_loop.push_back(label_atual);
 	}
-
-	conjunto_label label_atual = {inicio, proximo, fim};
-
-	pilha_label.push_back(label_atual);
 
 	return label_atual;
 }
 
-conjunto_label recupera_label() {
-	return pilha_label.back();
+conjunto_label recupera_label(bool loop) {
+
+	if(loop) {
+		return pilha_label_loop.back();
+	} else {
+		return pilha_label.back();
+	}
 }
 
-void exclui_label() {
-	pilha_label.pop_back();
+void exclui_label(bool loop) {
+
+	if(loop) {
+		pilha_label_loop.pop_back();
+	} else {
+		pilha_label.pop_back();
+	}
 }
 
 string gera_declaracoes_variaveis() {

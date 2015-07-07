@@ -1,8 +1,9 @@
 int main()
-	
-	string a;
-	string b;
 
-	a = b = "1";
+	int a;
+	
+	while(true)
+		a = a + 1;
+	end
 
 end

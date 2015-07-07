@@ -113,6 +113,13 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_ELSE;
 			}
 
+"while"		{
+				yylval.label = yytext;
+				yylval.traducao = "if";
+
+				return TK_WHILE;
+			}
+
 [(){}[\];,]	{ return *yytext; }
 
 "+"			{
