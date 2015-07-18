@@ -11,6 +11,11 @@ DIGITO [0-9]
 LETRA [A-Za-z_]
 COMENTARIO #.*"\n"
 
+COMENTARIO_INICIO \/\*
+COMENTARIO_FIM \*\/
+
+COMENTARIO_MULTILINHA {COMENTARIO_INICIO}(.|"\n")*{COMENTARIO_FIM}
+
 DELIM {ESPACO}+
 NUM {DIGITO}+
 REAL {NUM}+("."{NUM}+)?
@@ -50,7 +55,16 @@ ID {LETRA}({LETRA}|{NUM})*
 {COMENTARIO} {
 				nlinha++;
 			}
-
+			
+{COMENTARIO_MULTILINHA} {
+							int i;
+							
+							for( i=0; yytext[i]; yytext[i]=='\n'? i++ : *yytext++);
+							
+							nlinha+=i;
+		
+						}
+ 
 "main"		{
 				return TK_MAIN;
 			}
