@@ -100,8 +100,9 @@ def verifica_cast():
 				# Operações entre string
 				elif i in tipos_caracteres and k in tipos_caracteres:
 
-					# Somente a operação de atribuição pode ser feita com a string (em teoria)
-					if j == "=":
+					if j in operacoes_relacionais:
+						yield (i, j, k, i, 0)
+					elif j == "=":
 						yield (i, j, k, i, 0)
 					elif j == "+":
 						yield (i, j, k, i, 0)

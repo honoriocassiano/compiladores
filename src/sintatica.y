@@ -442,8 +442,6 @@ EST_WHILE	: DEC_EST_WHILE EST_BLOCO_P
 
 				conjunto_label label_atual = pilha_label_loop.back();
 
-				//cout << $1.label << "\n\n";
-
 				stringstream traducao;
 
 				traducao << $2.traducao << endl;
@@ -952,10 +950,29 @@ E_REL		: E TK_REL_OP E
 					tipo_cast cast = mapa_cast[chave];
 
 					//TODO verificar se o tamanho está certo
-					nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
+					//nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
 
 					if(cast.operando_cast == 0) {
-						$$.traducao = $3.traducao + "\t" + $1.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + $3.label + ";";
+
+						stringstream traducao;
+
+						traducao << $3.traducao << "\t" + $1.traducao << "\n\t";
+
+						if(!(cast.resultado == "string")) {
+							nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
+
+							traducao << nome_variavel_temporaria << " = " << $1.label << " " << $2.traducao << " " << $3.label << ";";
+						} else {
+							string nome_variavel_temporaria_comparacao = gera_variavel_temporaria("boolean", 0);
+
+							traducao << nome_variavel_temporaria_comparacao << " = " << "strcmp(" << $1.label << ", " << $3.label << ");\n\t";
+
+							nome_variavel_temporaria = gera_variavel_temporaria("boolean", 0);
+
+							traducao << nome_variavel_temporaria << " = " << nome_variavel_temporaria_comparacao << " " << $2.traducao << " 0;\n";
+						}
+
+						$$.traducao = traducao.str();
 					
 					} else if(cast.operando_cast == 1) {
 
@@ -1598,7 +1615,7 @@ string gera_funcao_temporaria(string tipo, string nome, map<string, info_variave
 		tipo_ponteiro.replace(tipo_ponteiro.end() - 1, tipo_ponteiro.end(), "");
 	}
 
-	nome_temporario << nome;
+	nome_temporario << nome << "_" << tipo;
 
 	for(map<string, info_variavel>::iterator it = parametros.begin(); it != parametros.end(); ++it) {
 		nome_temporario << "_" << it->second.tipo;
