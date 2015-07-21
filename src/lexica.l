@@ -69,6 +69,12 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_MAIN;
 			}
 
+"return"	{
+				yylval.label = yytext;
+				yylval.traducao = yytext;
+				return TK_RETURN;
+			}
+
 "int"		{
 				yylval.label = yytext;
 				yylval.traducao = "int";

@@ -1,13 +1,9 @@
+string a()
+
+	return "1.0";
+end
+
 int main()
 
-	/*
-
-
-
-
-
-	*/
-
-	b = 2;
 
 end

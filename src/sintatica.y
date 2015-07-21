@@ -40,7 +40,17 @@ typedef struct _info_variavel
 	string tipo;
 	string nome_temp;
 	int tamanho;
+	bool parametro;
 } info_variavel;
+
+typedef struct _info_funcao
+{
+	string nome_temp;
+	string tipo;
+	int tamanho;
+	map<string, info_variavel> parametros;
+
+} info_funcao;
 
 map<string, info_variavel> ultimo_contexto;
 
@@ -64,6 +74,9 @@ typedef struct _conjunto_label
 // Variável para o cabeçalho
 stringstream cabecalho;
 
+// Variável para indicar a função atual
+string funcao_atual;
+
 // Mapa de casts
 map<string, tipo_cast> mapa_cast;
 
@@ -82,6 +95,12 @@ vector<conjunto_label> pilha_label_loop;
 // Pilha de contextos
 vector< map<string, info_variavel> > pilha_contexto;
 
+// Lista de retornos de função
+vector<info_variavel> lista_retornos;
+
+// Mapa de funcoes
+map<string, info_funcao> mapa_funcao;
+
 map<string, info_variavel> mapa_global_variavel;
 
 /****************************************
@@ -90,6 +109,9 @@ map<string, info_variavel> mapa_global_variavel;
 
 // Função para recuperação de variáveis
 info_variavel *recupera_variavel(string nome);
+
+// Funcao para recuperação de funcções
+info_funcao *recupera_funcao(string nome);
 
 // Função para recuperar variável em um determinado escopo
 info_variavel *recupera_variavel(string nome, map<string, info_variavel> mapa_contexto);
@@ -127,14 +149,17 @@ string gera_declaracoes_variaveis();
 
 string gera_chave(string operador1, string operador2, string operacao);
 
+// Função para gerar funções temporárias
+string gera_funcao_temporaria(string tipo, string nome, map<string, info_variavel> parametros);
+
 // Função para gerar nomes temporários para as variáveis
-string gera_variavel_temporaria(string tipo, int tamanho, string nome="");
+string gera_variavel_temporaria(string tipo, int tamanho, string nome="", bool parametro=false);
 
 void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %}
 
-%token TK_MAIN TK_ID
+%token TK_MAIN TK_ID TK_RETURN
 %token TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_TIPO_DOUBLE TK_TIPO_LONG TK_TIPO_STRING
 %token TK_ATR
 %token TK_SOMA TK_SUB 
@@ -164,7 +189,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %%
 
-S 			: INI_ESCOPO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
+S 			: FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 			{
 				//ofstream myfile;
 				//myfile.open ("example.c");
@@ -179,10 +204,97 @@ S 			: INI_ESCOPO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 
 				if(!erro) {
 					//cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
-					cout << cabecalho.str() << "\nint main(void)\n{" << gera_declaracoes_variaveis() << $6.traducao << "\n\treturn 0;\n}" << endl; 
-				} 
+					cout << cabecalho.str();
+					cout << $1.traducao << endl;
+					cout << "int main(void)\n{";
+					cout << gera_declaracoes_variaveis() << $6.traducao << "\n\treturn 0;\n}" << endl;
+				}
 				//myfile.close();
-			};
+			}
+			| TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
+			{
+
+				adiciona_biblioteca_cabecalho("stdio.h");
+
+				if(!erro) {
+					//cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
+					cout << cabecalho.str() << "int main(void) {\n" << gera_declaracoes_variaveis() << $5.traducao << "\n\treturn 0;\n}" << endl; 
+				}
+				//myfile.close();
+			}
+
+CABECALHO_FUNC : TIPO TK_ID '(' ')'
+			{
+				string funcao = gera_funcao_temporaria($1.label, $2.label, map<string, info_variavel>());
+
+				info_funcao *info_funcao = recupera_funcao($2.label);
+
+				if($1.label == "string") {
+					$$.traducao = "char* " + info_funcao->nome_temp + "() {\n";
+				} else {
+					$$.traducao = $1.traducao + " " + info_funcao->nome_temp + "() {\n";
+				}
+
+				$$.label = $2.label;
+				$$.tipo = $1.label;
+
+				funcao_atual = $2.label;
+			}
+
+FUNCAO		: FUNCAO CABECALHO_FUNC BLOCO_SEM_B
+			{
+
+				info_funcao *info_funcao = recupera_funcao($2.label);
+				
+				int tamanho_retorno = 0;
+
+				for(vector<info_variavel>::iterator it = lista_retornos.begin(); it != lista_retornos.end(); ++it ) {
+					if(it->tamanho > tamanho_retorno) {
+						tamanho_retorno = it->tamanho;
+					}
+				}
+
+				info_funcao->tamanho = tamanho_retorno;
+
+				funcao_atual = $2.label;
+
+				stringstream traducao;
+
+				traducao << $1.traducao;
+				traducao << $2.traducao;
+				traducao << gera_declaracoes_variaveis();
+				traducao << $3.traducao << "\n}\n";
+
+				$$.traducao = traducao.str();
+				$$.tamanho = tamanho_retorno;
+				$$.label = $2.label;
+
+				lista_retornos.clear();
+			}
+			| CABECALHO_FUNC BLOCO_SEM_B
+			{
+				info_funcao *info_funcao = recupera_funcao($1.label);
+				
+				int tamanho_retorno = 0;
+
+				for(vector<info_variavel>::iterator it = lista_retornos.begin(); it != lista_retornos.end(); ++it ) {
+					if(it->tamanho > tamanho_retorno) {
+						tamanho_retorno = it->tamanho;
+					}
+				}
+
+				info_funcao->tamanho = tamanho_retorno;
+
+				stringstream traducao;
+
+				traducao << $1.traducao;
+				traducao << gera_declaracoes_variaveis();
+				traducao << $2.traducao << "\n}\n";
+
+				$$.traducao = traducao.str();
+				
+				lista_retornos.clear();
+			}
 
 INI_ESCOPO:
 			{
@@ -194,6 +306,8 @@ INI_ESCOPO:
 BLOCO_SEM_B	: INI_ESCOPO COMANDOS TK_END
 			{
 				$$.traducao = $2.traducao;
+				$$.tipo = $2.tipo;
+				$$.tamanho = $2.tamanho;
 
 				finaliza_escopo();
 			};
@@ -203,12 +317,19 @@ EST_BLOCO_P	: INI_ESCOPO COMANDOS
 				$$.traducao = $2.traducao;
 
 				finaliza_escopo();
-
 			}
 
 COMANDOS	: COMANDO ';' COMANDOS
 			{
 				$$.traducao = $1.traducao + $3.traducao;
+
+				if($3.tipo != "undefined") {
+					$$.tipo = $3.tipo;
+					$$.tamanho = $3.tamanho;
+				} else {
+					$$.tipo = $1.tipo;
+					$$.tamanho = $1.tamanho;
+				}
 			}
 			| EST_BLOCO COMANDOS
 			{
@@ -217,6 +338,7 @@ COMANDOS	: COMANDO ';' COMANDOS
 			{
 				$$.traducao = "";
 				$$.label = "";
+				$$.tipo = "undefined";
 			};
 
 EST_BLOCO	: BLOCO_COM_B
@@ -249,8 +371,6 @@ EST_BLOCO	: BLOCO_COM_B
 			{
 				$$.traducao = $1.traducao;
 			}
-
-
 
 EST_FOR		: TK_FOR '(' ATRIBUICAO ';' E_OP_OR ';' ATRIBUICAO ')' EST_BLOCO_P
 			{
@@ -427,12 +547,78 @@ COMANDO 	: DECLARACAO
 			{
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
+				$$.tipo = "undefined";
 			}
 			| ATRIBUICAO
 			{
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
-			};
+				$$.tipo = "undefined";
+			}
+			| TK_RETURN E_OP_OR
+			{
+
+				info_funcao *funcao = recupera_funcao(funcao_atual);
+
+				if(funcao) {
+
+					info_variavel *ptr_variavel = recupera_variavel($2.label);
+
+					string tipo_retorno;
+
+					if(ptr_variavel) {
+
+						string chave = gera_chave(funcao->tipo, $2.tipo, "=");
+
+						string nome_variavel_temporaria;
+
+						if(mapa_cast.find(chave) != mapa_cast.end()) {
+
+							stringstream traducao;
+
+							tipo_cast cast = mapa_cast[chave];
+
+							traducao << $2.traducao << "\n";
+
+							if($2.tipo == "string") {
+								nome_variavel_temporaria = gera_variavel_temporaria("char*", $2.tamanho);
+
+								traducao << "\t" << nome_variavel_temporaria << " = (char *) malloc(" << ($2.tamanho+1) << "* sizeof(char));\n";
+								traducao << "\t" << "strcpy(" << nome_variavel_temporaria << "," << $2.label << ");\n";
+							} else {
+								nome_variavel_temporaria = $2.label;
+							}
+
+							switch(cast.operando_cast) {
+								case 0: 
+									traducao << "\t" << $1.traducao << " " << nome_variavel_temporaria << ";\n";
+									$$.tipo = $2.tipo;
+									break;
+								case 2:
+									traducao << "\t" << $1.traducao << " " << "(" << cast.resultado << ") " << nome_variavel_temporaria << ";\n";
+									$$.tipo = cast.resultado;
+									break;
+								default:
+									cout << "Erro na linha " << nlinha <<": Impossível retornar um valor do tipo " + $2.tipo + " em uma função do tipo " + funcao->tipo + "\n";
+									erro = true;
+							}
+
+							info_variavel variavel_retorno = {$2.tipo, $2.label, $2.tamanho, false};
+
+							lista_retornos.push_back(variavel_retorno);
+
+							$$.tamanho = variavel_retorno.tamanho;
+							$$.traducao = traducao.str();
+
+						} else {
+
+							cout << "Erro na linha " << nlinha <<": Impossível retornar um valor do tipo " + $2.tipo + " em uma função do tipo " + funcao->tipo + "\n";
+
+							erro = true;
+						}
+					}
+				}
+			}
 
 DIREITA_ATR	: ATRIBUICAO
 			{
@@ -1046,6 +1232,27 @@ TK_ARIT_OP_M: TK_MUL
 				$$.label = $1.label;
 			};
 
+/*
+ID_FUNCAO	: TK_ID 
+			{
+				info_funcao *funcao = recupera_funcao($1.label);
+
+				if(!funcao) {
+					cout << "Erro na linha " << nlinha <<": Função \"" << $1.label << "\" não declarada" << endl << endl;
+
+					erro = true;
+
+					$$.label = "";
+					$$.traducao = "";
+					$$.tipo = "undeclared";
+				} else {
+					$$.label = funcao->nome_temp;
+					$$.traducao = "";
+					$$.tipo = funcao->tipo;
+				}
+			};
+*/
+
 TIPO 		: TK_TIPO_INT
 			{
 				$$.label = $1.label;
@@ -1087,7 +1294,7 @@ int yyparse();
 
 int contador = 0;
 
-string gera_variavel_temporaria(string tipo, int tamanho, string nome) {
+string gera_variavel_temporaria(string tipo, int tamanho, string nome, bool parametro) {
 
 	stringstream nome_temporario;
 	string nome_mapa;
@@ -1110,7 +1317,7 @@ string gera_variavel_temporaria(string tipo, int tamanho, string nome) {
 
 	contador++;
 
-	info_variavel atributos = {tipo, nome_temporario.str(), tamanho};
+	info_variavel atributos = {tipo, nome_temporario.str(), tamanho, parametro};
 	if(!recupera_variavel(nome_mapa, pilha_contexto.back())) {
 
 		pilha_contexto.back()[nome_mapa] = atributos;
@@ -1303,7 +1510,78 @@ string gera_declaracoes_variaveis() {
 		variaveis << ";\n";
 	}
 
+	mapa_global_variavel.clear();
+
 	return variaveis.str();
+}
+
+string gera_funcao_temporaria(string tipo, string nome, map<string, info_variavel> parametros) {
+
+	stringstream nome_temporario;
+	string nome_mapa;
+
+	string tipo_ponteiro = tipo;
+
+	if(tipo_ponteiro[tipo_ponteiro.size() - 1] == '*') {
+		tipo_ponteiro.replace(tipo_ponteiro.end() - 1, tipo_ponteiro.end(), "");
+	}
+
+	nome_temporario << "temp_" << tipo_ponteiro << "_";
+
+	if (!nome.empty()) {
+		nome_temporario << nome << "_" << contador;
+		nome_mapa = nome;
+	} else {
+		nome_temporario << "exp_" << contador;
+		nome_mapa = nome_temporario.str();
+	}
+
+	contador++;
+
+	for (map<string, info_variavel>::iterator it = parametros.begin(); it != parametros.end(); ++it) {
+
+		info_variavel variavel = it->second;
+
+		gera_variavel_temporaria(variavel.tipo, variavel.tamanho, it->first, true);
+	}
+
+	info_funcao atributos_funcao = {nome_temporario.str(), tipo, 0, parametros};
+	if(!recupera_funcao(nome_mapa)) {
+
+		mapa_funcao[nome_mapa] = atributos_funcao;
+
+	} else {
+		cout << "Erro na linha " << nlinha <<": Você já declarou a função \"" << nome << "\"." << endl << endl;
+		erro = true;
+	}
+
+
+	//gera_variavel_temporaria(string tipo, int tamanho, string nome)
+
+	//gera_variavel_temporaria(tipo, 0, string nome, true);
+
+	/*
+	info_variavel atributos = {tipo, nome_temporario.str(), parametros};
+	if(!recupera_variavel(nome_mapa, pilha_contexto.back())) {
+
+		pilha_contexto.back()[nome_mapa] = atributos;
+
+	} else {
+		cout << "Erro na linha " << nlinha <<": Você já declarou a variável \"" << nome << "\"." << endl << endl;
+		erro = true;
+	}
+	*/
+
+	return nome_temporario.str();
+}
+
+info_funcao *recupera_funcao(string nome) {
+
+	if(mapa_funcao.find(nome) != mapa_funcao.end()) {
+		return &mapa_funcao[nome];
+	}
+
+	return (info_funcao *) 0;
 }
 
 void inicializa_escopo() {

@@ -103,12 +103,8 @@ def verifica_cast():
 					# Somente a operação de atribuição pode ser feita com a string (em teoria)
 					if j == "=":
 						yield (i, j, k, i, 0)
-						"""
-						Para a operação de concatenação
-
 					elif j == "+":
 						yield (i, j, k, i, 0)
-						"""
 					else:
 						#yield (i, j, k, "null", -1)
 						continue
