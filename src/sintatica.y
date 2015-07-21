@@ -101,6 +101,10 @@ vector<info_variavel> lista_retornos;
 // Mapa de funcoes
 map<string, info_funcao> mapa_funcao;
 
+// Mapa de parâmetros da função atual
+map<string, info_variavel> mapa_parametros_funcao_atual;
+
+// Mapa que guarda todas as variáveis de uma função
 map<string, info_variavel> mapa_global_variavel;
 
 /****************************************
@@ -193,7 +197,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %%
 
-S 			: FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
+S 			: INI_ESCOPO FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 			{
 				//ofstream myfile;
 				//myfile.open ("example.c");
@@ -209,38 +213,94 @@ S 			: FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 				if(!erro) {
 					//cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
 					cout << cabecalho.str();
-					cout << $1.traducao << endl;
+					cout << $2.traducao << endl;
 					cout << "int main(void)\n{";
-					cout << gera_declaracoes_variaveis() << $6.traducao << "\n\treturn 0;\n}" << endl;
+					cout << gera_declaracoes_variaveis() << $7.traducao << "\n\treturn 0;\n}" << endl;
 				}
 				//myfile.close();
 			}
-			| TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
+			| INI_ESCOPO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 			{
 
 				adiciona_biblioteca_cabecalho("stdio.h");
 
 				if(!erro) {
 					//cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
-					cout << cabecalho.str() << "int main(void) {\n" << gera_declaracoes_variaveis() << $5.traducao << "\n\treturn 0;\n}" << endl; 
+					cout << cabecalho.str() << "int main(void) {\n" << gera_declaracoes_variaveis() << $6.traducao << "\n\treturn 0;\n}" << endl; 
 				}
 				//myfile.close();
 			}
-
-CABECALHO_FUNC : TIPO_FUNC TK_ID '(' ')'
+			
+ARGUMENTO	: TIPO TK_ID
 			{
+				string nome_variavel_temporaria = gera_variavel_temporaria($1.label, 0, $2.label, true);
+				
+				if(mapa_parametros_funcao_atual.find($2.label) == mapa_parametros_funcao_atual.end()) {
+					
+					mapa_parametros_funcao_atual[$2.label] = *recupera_variavel($2.label);
+					
+					if($1.label == "string") {
+						$$.traducao = $1.traducao + "* " + $2.label;
+					} else {
+						$$.traducao = $1.traducao + " " + $2.label;
+					}
+					
+					$$.label = $1.label;
+					$$.tipo = $2.tipo;
+					$$.tamanho = $2.tamanho;
+					
+				} else {
+					cout << "Erro na linha " << nlinha <<": O nome do parâmetro " << $2.label << " já foi declarado\n";
+					erro = true;
+				}
+			}
+		
+ARGUMENTOS	: ARGUMENTOS ',' ARGUMENTO
+			{
+				$$.traducao = $1.traducao + ", " + $3.traducao;
+				$$.label = $3.label;
+				$$.tamanho = $3.tamanho;
+				$$.tipo = $3.tipo;
+			}
+			| ARGUMENTO
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+				$$.tamanho = $1.tamanho;
+				$$.tipo = $1.tipo;
+			}
+			| 
+			{
+				$$.traducao = "";
+				$$.label = "";
+				$$.tipo = "undefined";
+				$$.tamanho = 0;
+			}
+
+CABECALHO_FUNC : TIPO_FUNC TK_ID '(' ARGUMENTOS ')'
+			{
+				
+				stringstream traducao;
+				
 				string funcao = gera_funcao_temporaria($1.label, $2.label, map<string, info_variavel>());
 
 				info_funcao *info_funcao = recupera_funcao($2.label);
 
 				if($1.label == "string") {
-					$$.traducao = "char* " + info_funcao->nome_temp + "() {\n";
+					
+					traducao << "char* " << info_funcao->nome_temp << "(";
 				} else {
-					$$.traducao = $1.traducao + " " + info_funcao->nome_temp + "() {\n";
+					
+					traducao << $1.traducao << " " << info_funcao->nome_temp << "(";
 				}
+				
+				traducao << $4.traducao;
+				
+				traducao << ") {\n";
 
 				$$.label = $2.label;
 				$$.tipo = $1.label;
+				$$.traducao = traducao.str();
 
 				funcao_atual = $2.label;
 			}
@@ -1073,7 +1133,7 @@ E 			: E TK_ARIT_OP_S E_TEMP
 
 					} else {
 
-					//TODO verificar se o tamanho está certo
+						//TODO verificar se o tamanho está certo
 						nome_variavel_temporaria = gera_variavel_temporaria(cast.resultado, 0);
 
 						if (cast.operando_cast == 0) {
