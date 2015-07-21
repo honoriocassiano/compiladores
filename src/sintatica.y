@@ -170,6 +170,8 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %token TK_LOGICO TK_NOT
 
+%token TK_BREAK TK_NEXT TK_ALL
+
 %token TK_MENOR
 %token TK_MAIOR
 %token TK_MENOR_IGUAL
@@ -372,7 +374,7 @@ EST_BLOCO	: BLOCO_COM_B
 				$$.traducao = $1.traducao;
 			}
 
-EST_FOR		: TK_FOR '(' ATRIBUICAO ';' E_OP_OR ';' ATRIBUICAO ')' EST_BLOCO_P
+DEC_EST_FOR : TK_FOR '(' ATRIBUICAO ';' E_OP_OR ';' ATRIBUICAO ')'
 			{
 				if($5.tipo == "boolean") {
 					stringstream traducao;
@@ -383,7 +385,10 @@ EST_FOR		: TK_FOR '(' ATRIBUICAO ';' E_OP_OR ';' ATRIBUICAO ')' EST_BLOCO_P
 					traducao << label_atual.inicio << ":\n";
 					traducao << $5.traducao << "\n\t" << $1.traducao << "(!(" << $5.label << "))";
 					traducao << " goto " << label_atual.fim << ";\n";
-					traducao << $9.traducao;
+
+					// Para substituição
+					traducao << "_r_";
+
 					traducao << $7.traducao;
 					traducao << "\n\tgoto " << label_atual.inicio << ";\n";
 					traducao << "\n" << label_atual.fim << ":\n";
@@ -397,7 +402,18 @@ EST_FOR		: TK_FOR '(' ATRIBUICAO ';' E_OP_OR ';' ATRIBUICAO ')' EST_BLOCO_P
 				}
 			}
 
-EST_WHILE	: TK_WHILE '(' E_OP_OR ')' EST_BLOCO_P
+EST_FOR		: DEC_EST_FOR EST_BLOCO_P
+			{
+				conjunto_label label_atual = pilha_label_loop.back();
+
+				string bloco_for = $1.traducao;
+
+				bloco_for = bloco_for.replace( bloco_for.find("_r_"), 3, $2.traducao );
+
+				$$.traducao = bloco_for;
+			}
+
+DEC_EST_WHILE : TK_WHILE '(' E_OP_OR ')'
 			{
 				if($3.tipo == "boolean") {
 
@@ -409,18 +425,32 @@ EST_WHILE	: TK_WHILE '(' E_OP_OR ')' EST_BLOCO_P
 					traducao << label_atual.inicio << ":\n";
 					traducao << "\t" << $1.traducao << "(!(" << $3.label << "))";
 					traducao << " goto " << label_atual.fim << ";\n";
-					traducao << $5.traducao << endl;
-					traducao << "\tgoto " << label_atual.inicio << ";\n";
-					traducao << label_atual.fim << ":\n";
 
 					$$.traducao = traducao.str();
 
+					$$.label = label_atual.fim;
 
 				} else {
 					cout << "Erro na linha " << nlinha <<": A condição utilizada na estrutura do while espera um valor do tipo boolean, mas o valor utilizado foi do tipo " + $3.tipo + "\n";
 
 					erro = true;
 				}
+			}
+
+EST_WHILE	: DEC_EST_WHILE EST_BLOCO_P
+			{
+
+				conjunto_label label_atual = pilha_label_loop.back();
+
+				//cout << $1.label << "\n\n";
+
+				stringstream traducao;
+
+				traducao << $2.traducao << endl;
+				traducao << "\tgoto " << label_atual.inicio << ";\n";
+				traducao << $1.label << ":\n";
+
+				$$.traducao = $1.traducao + traducao.str();
 			}
 
 EST_ELSE	: EST_ELSIF TK_ELSE EST_BLOCO_P
@@ -554,6 +584,48 @@ COMANDO 	: DECLARACAO
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 				$$.tipo = "undefined";
+			}
+			| TK_BREAK
+			{
+				if(!pilha_label_loop.empty()) {
+					$$.traducao = "\tgoto " + pilha_label_loop.back().fim + ";\n";
+				} else {
+					cout << "Erro na linha " << nlinha << ": Não existem loops a serem parados\n";
+					erro = true;
+				}
+
+				$$.label = $1.label;
+				$$.tamanho = $1.tamanho;
+			}
+			| TK_BREAK TK_ALL
+			{
+				if(!pilha_label_loop.empty()) {
+					$$.traducao = "\tgoto " + pilha_label_loop.front().fim + ";\n";
+				} else {
+					cout << "Erro na linha " << nlinha << ": Não existem loops a serem parados\n";
+					erro = true;
+				}
+
+				$$.label = $1.label;
+				$$.tamanho = $1.tamanho;
+			}
+			| TK_NEXT
+			{
+				if(!pilha_label_loop.empty()) {
+					$$.traducao = "\tgoto " + pilha_label_loop.back().inicio + ";\n";
+				} else {
+					cout << "Erro na linha " << nlinha << ": Não existem loops a serem continuados\n";
+					erro = true;
+				}
+			}
+			| TK_NEXT TK_ALL
+			{
+				if(!pilha_label_loop.empty()) {
+					$$.traducao = "\tgoto " + pilha_label_loop.front().inicio + ";\n";
+				} else {
+					cout << "Erro na linha " << nlinha << ": Não existem loops a serem continuados\n";
+					erro = true;
+				}
 			}
 			| TK_RETURN E_OP_OR
 			{
@@ -1526,17 +1598,13 @@ string gera_funcao_temporaria(string tipo, string nome, map<string, info_variave
 		tipo_ponteiro.replace(tipo_ponteiro.end() - 1, tipo_ponteiro.end(), "");
 	}
 
-	nome_temporario << "temp_" << tipo_ponteiro << "_";
+	nome_temporario << nome;
 
-	if (!nome.empty()) {
-		nome_temporario << nome << "_" << contador;
-		nome_mapa = nome;
-	} else {
-		nome_temporario << "exp_" << contador;
-		nome_mapa = nome_temporario.str();
+	for(map<string, info_variavel>::iterator it = parametros.begin(); it != parametros.end(); ++it) {
+		nome_temporario << "_" << it->second.tipo;
 	}
-
-	contador++;
+	
+	nome_mapa = nome;
 
 	for (map<string, info_variavel>::iterator it = parametros.begin(); it != parametros.end(); ++it) {
 
@@ -1597,6 +1665,9 @@ void finaliza_escopo() {
 	mapa_global_variavel.insert(ultimo_contexto.begin(), ultimo_contexto.end());
 
 	pilha_contexto.pop_back();
+
+	//pilha_label.clear();
+	//pilha_label_loop.clear();
 }
 
 void adiciona_biblioteca_cabecalho(string nome_biblioteca) {

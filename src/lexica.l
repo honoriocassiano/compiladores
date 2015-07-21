@@ -75,6 +75,24 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_RETURN;
 			}
 
+"break"		{
+				yylval.label = yytext;
+				yylval.traducao = yytext;
+				return TK_BREAK;
+			}
+
+"all"		{
+				yylval.label = yytext;
+				yylval.traducao = yytext;
+				return TK_ALL;
+			}
+
+"next"	{
+				yylval.label = yytext;
+				yylval.traducao = yytext;
+				return TK_NEXT;
+			}
+
 "int"		{
 				yylval.label = yytext;
 				yylval.traducao = "int";
