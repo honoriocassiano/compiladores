@@ -178,6 +178,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 %token TK_MAIOR_IGUAL
 %token TK_IGUAL
 %token TK_DIFERENTE
+%token TK_AMPERSAND
 
 %token TK_AND TK_OR
 
@@ -1210,8 +1211,9 @@ VAL			: '(' TIPO ')' VAL
 			}
 			| TK_ID
 			{
+				
 				info_variavel *variavel = recupera_variavel($1.label);
-
+				
 				if(!variavel) {
 					cout << "Erro na linha " << nlinha <<": Variável \"" << $1.label << "\" não declarada neste escopo" << endl << endl;
 
@@ -1221,7 +1223,7 @@ VAL			: '(' TIPO ')' VAL
 					$$.traducao = "";
 					$$.tipo = "undeclared";
 				} else {
-					$$.label = variavel->nome_temp;
+					//$$.label = variavel->nome_temp;
 					$$.traducao = "";
 					$$.tipo = variavel->tipo;
 				}
@@ -1261,6 +1263,60 @@ VAL			: '(' TIPO ')' VAL
 				$$.label = nome_variavel_temporaria;
 				$$.tipo = $1.tipo;
 				$$.tamanho = $1.tamanho;
+			}
+			| TK_AMPERSAND VAL
+			{
+				stringstream traducao;
+				
+				if($2.tipo == "string") {
+					string nome_variavel_temporaria = gera_variavel_temporaria("int", 1);
+					
+					info_variavel *variavel = recupera_variavel($2.label);
+					
+					if(variavel) {
+						traducao << nome_variavel_temporaria << " = (int) " << variavel->nome_temp << "[0];\n";
+						
+						$$.traducao = traducao.str();
+						$$.label = nome_variavel_temporaria;
+						
+					} else {
+						cout << "Erro na linha AAA" << nlinha <<": Variável \"" << $1.label << "\" não declarada neste escopo" << endl << endl;
+						erro = true;
+					}
+					
+				} else {
+					cout << "Erro na linha " << nlinha <<": Impossível aplicar a operação & a uma variável do tipo " << $2.tipo << endl << endl;
+					erro = true;
+				}
+				
+				$$.tipo = "int";
+				$$.tamanho = 0;
+			}
+			| TK_ID '[' TK_NUM ']'
+			{
+				stringstream traducao;
+				
+				if($1.tipo == "string") {
+				
+					info_variavel *variavel = recupera_variavel($1.label);
+					
+					if(variavel) {
+					
+						string nome_variavel_temporaria = gera_variavel_temporaria($1.tipo, 1);
+						traducao << "\n\tstrncpy(" << nome_variavel_temporaria << ", " << variavel->nome_temp << "+" << $3.label << ", 1);\n";
+						
+						$$.traducao = traducao.str();
+						$$.label = nome_variavel_temporaria;
+						$$.tipo = $1.tipo;
+						$$.tamanho = 2;
+					} else {
+						cout << "Erro na linha " << nlinha <<": Variável \"" << $1.label << "\" não declarada neste escopo" << endl << endl;
+						erro = true;
+					}
+				} else {
+					cout << "Erro na linha " << nlinha <<": Impossível aplicar slice a uma variável do tipo " << $1.tipo << endl << endl;
+					erro = true;
+				}
 			};
 
 TK_REL_OP	: TK_MENOR

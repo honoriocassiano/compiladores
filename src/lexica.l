@@ -8,6 +8,7 @@ using namespace std;
 
 ESPACO [ \t]
 DIGITO [0-9]
+AMPERSAND &
 LETRA [A-Za-z_]
 COMENTARIO #.*"\n"
 
@@ -34,6 +35,12 @@ ID {LETRA}({LETRA}|{NUM})*
 "="			{
 				yylval.label = yytext;
 				return TK_ATR;
+			}
+			
+{AMPERSAND}	{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				return TK_AMPERSAND;
 			}
 
 "begin"		{
@@ -208,6 +215,8 @@ ID {LETRA}({LETRA}|{NUM})*
 				yylval.label = yytext;
 				return TK_MAIOR;
 			}
+			
+
 
 "<="		{
 				yylval.traducao = yytext;

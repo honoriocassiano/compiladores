@@ -1,7 +1,7 @@
 int main()
 	
-	while("a" == "n")
-
-	end
+	string a = "ab";
+	
+	int c = &a;
 
 end
