@@ -2,6 +2,6 @@ int main()
 	
 	string a = "ab";
 	
-	int c = &a;
+	int c = &b;
 
 end

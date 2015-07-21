@@ -1223,7 +1223,7 @@ VAL			: '(' TIPO ')' VAL
 					$$.traducao = "";
 					$$.tipo = "undeclared";
 				} else {
-					//$$.label = variavel->nome_temp;
+					$$.label = variavel->nome_temp;
 					$$.traducao = "";
 					$$.tipo = variavel->tipo;
 				}
@@ -1270,19 +1270,11 @@ VAL			: '(' TIPO ')' VAL
 				
 				if($2.tipo == "string") {
 					string nome_variavel_temporaria = gera_variavel_temporaria("int", 1);
+
+					traducao << nome_variavel_temporaria << " = (int) " << $2.label << "[0];\n";
 					
-					info_variavel *variavel = recupera_variavel($2.label);
-					
-					if(variavel) {
-						traducao << nome_variavel_temporaria << " = (int) " << variavel->nome_temp << "[0];\n";
-						
-						$$.traducao = traducao.str();
-						$$.label = nome_variavel_temporaria;
-						
-					} else {
-						cout << "Erro na linha AAA" << nlinha <<": Variável \"" << $1.label << "\" não declarada neste escopo" << endl << endl;
-						erro = true;
-					}
+					$$.traducao = traducao.str();
+					$$.label = nome_variavel_temporaria;
 					
 				} else {
 					cout << "Erro na linha " << nlinha <<": Impossível aplicar a operação & a uma variável do tipo " << $2.tipo << endl << endl;
