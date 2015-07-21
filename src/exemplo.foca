@@ -1,7 +1,8 @@
+int a()
+	
+end
+
 int main()
 	
-	string a = "ab";
-	
-	int c = &b;
 
 end

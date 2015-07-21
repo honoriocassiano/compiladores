@@ -136,6 +136,13 @@ ID {LETRA}({LETRA}|{NUM})*
 
 				return TK_TIPO_STRING;
 			}
+	
+"void"		{
+				yylval.label = yytext;
+				yylval.traducao = yytext;
+				yylval.tipo = yytext;
+				return TK_VOID;
+			}
 
 "if"		{
 				yylval.label = yytext;

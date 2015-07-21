@@ -161,6 +161,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %token TK_MAIN TK_ID TK_RETURN
 %token TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_TIPO_DOUBLE TK_TIPO_LONG TK_TIPO_STRING
+%token TK_VOID
 %token TK_ATR
 %token TK_SOMA TK_SUB 
 %token TK_MUL TK_DIV TK_RESTO
@@ -226,7 +227,7 @@ S 			: FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 				//myfile.close();
 			}
 
-CABECALHO_FUNC : TIPO TK_ID '(' ')'
+CABECALHO_FUNC : TIPO_FUNC TK_ID '(' ')'
 			{
 				string funcao = gera_funcao_temporaria($1.label, $2.label, map<string, info_variavel>());
 
@@ -250,10 +251,12 @@ FUNCAO		: FUNCAO CABECALHO_FUNC BLOCO_SEM_B
 				info_funcao *info_funcao = recupera_funcao($2.label);
 				
 				int tamanho_retorno = 0;
-
-				for(vector<info_variavel>::iterator it = lista_retornos.begin(); it != lista_retornos.end(); ++it ) {
-					if(it->tamanho > tamanho_retorno) {
-						tamanho_retorno = it->tamanho;
+				
+				int contador = 0;
+				
+				for(contador = 0; contador < lista_retornos.size(); contador++) {
+					if(lista_retornos[contador].tamanho > tamanho_retorno) {
+						tamanho_retorno = lista_retornos[contador].tamanho;
 					}
 				}
 
@@ -266,7 +269,14 @@ FUNCAO		: FUNCAO CABECALHO_FUNC BLOCO_SEM_B
 				traducao << $1.traducao;
 				traducao << $2.traducao;
 				traducao << gera_declaracoes_variaveis();
-				traducao << $3.traducao << "\n}\n";
+				traducao << $3.traducao;
+				traducao << "\n\treturn";
+				
+				if(mapa_valor_padrao.find($2.tipo) != mapa_valor_padrao.end()) {
+					traducao << " " << mapa_valor_padrao[$2.tipo];
+				}
+				
+				traducao << ";\n}\n";
 
 				$$.traducao = traducao.str();
 				$$.tamanho = tamanho_retorno;
@@ -292,7 +302,13 @@ FUNCAO		: FUNCAO CABECALHO_FUNC BLOCO_SEM_B
 
 				traducao << $1.traducao;
 				traducao << gera_declaracoes_variaveis();
-				traducao << $2.traducao << "\n}\n";
+				traducao << "\n\treturn";
+				
+				if(mapa_valor_padrao.find($1.tipo) != mapa_valor_padrao.end()) {
+					traducao << " " << mapa_valor_padrao[$1.tipo];
+				}
+				
+				traducao << ";\n}\n";
 
 				$$.traducao = traducao.str();
 				
@@ -624,6 +640,24 @@ COMANDO 	: DECLARACAO
 				} else {
 					cout << "Erro na linha " << nlinha << ": Não existem loops a serem continuados\n";
 					erro = true;
+				}
+			}
+			| TK_RETURN
+			{
+				info_funcao *funcao = recupera_funcao(funcao_atual);
+				
+				if(funcao) {
+					
+					if(funcao->tipo == "void") {
+						$$.traducao = "\t" + $1.traducao + ";\n";
+						$$.label = $1.label;
+						$$.tamanho = 0;
+						$$.tipo = "void";
+						
+					} else {
+						cout << "Erro na linha " << nlinha <<": A função " + funcao_atual + " necessita de um valor de retorno do tipo " + funcao->tipo + "\n";
+						erro = true;
+					}
 				}
 			}
 			| TK_RETURN E_OP_OR
@@ -1422,6 +1456,18 @@ TIPO 		: TK_TIPO_INT
 				$$.label = $1.label;
 				$$.traducao = $1.traducao;
 			};
+			
+TIPO_FUNC	: TIPO
+			{
+				$$.label = $1.label;
+				$$.traducao = $1.traducao;
+			}
+			| TK_VOID
+			{
+				$$.label = $1.label;
+				$$.traducao = $1.traducao;
+				$$.tipo = $1.tipo;
+			}
 
 %%
 
