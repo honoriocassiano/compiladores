@@ -173,6 +173,8 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 %token TK_FIM TK_ERROR
 %token TK_NUM TK_FLOAT TK_LONG TK_DOUBLE TK_STRING
 
+%token TK_WRITE TK_WRITELN TK_READ
+
 %token TK_LOGICO TK_NOT
 
 %token TK_BREAK TK_NEXT TK_ALL
@@ -702,6 +704,20 @@ COMANDO 	: DECLARACAO
 					erro = true;
 				}
 			}
+			| TK_WRITE ARGS_IO
+			{
+				$$.traducao = $2.traducao;
+				$$.label = $2.label;
+				$$.tipo = "void";
+				$$.tamanho = 0;
+			}
+			| TK_WRITELN ARGS_IO
+			{
+				$$.traducao = $2.traducao + "\tcout << endl;\n";
+				$$.label = $2.label;
+				$$.tipo = "void";
+				$$.tamanho = 0;
+			}
 			| TK_RETURN
 			{
 				info_funcao *funcao = recupera_funcao(funcao_atual);
@@ -783,6 +799,23 @@ COMANDO 	: DECLARACAO
 						}
 					}
 				}
+			}
+
+ARGS_IO		: ARGS_IO ',' E_OP_OR
+			{
+				$$.label = $3.label;
+				if($3.tipo == "boolean")
+					$$.traducao = $1.traducao + $3.traducao + "\n\tcout << \" \" << (" + $3.label + "? \"true\" : \"false\");\n";
+				else
+					$$.traducao = $1.traducao + $3.traducao + "\n\tcout << \" \" << " + $3.label + ";\n";
+			}
+			| E_OP_OR
+			{
+				$$.label = $1.label;
+				if($1.tipo == "boolean")
+					$$.traducao = $1.traducao + "\n\tcout << (" + $1.label + "? \"true\" : \"false\");\n";
+				else
+					$$.traducao = $1.traducao + "\n\tcout << " + $1.label + ";\n";
 			}
 
 DIREITA_ATR	: ATRIBUICAO

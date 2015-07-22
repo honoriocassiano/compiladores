@@ -94,7 +94,26 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_ALL;
 			}
 
-"next"	{
+"write"		{
+				yylval.label = yytext;
+				yylval.traducao = "cout";
+				return TK_WRITE;
+			}
+
+"writeln"	{
+				yylval.label = yytext;
+				yylval.traducao = "cout";
+				return TK_WRITELN;
+			}
+
+"read"	{
+				yylval.label = yytext;
+				yylval.traducao = "cin";
+				return TK_READ;
+			}
+			
+
+"next"		{
 				yylval.label = yytext;
 				yylval.traducao = yytext;
 				return TK_NEXT;

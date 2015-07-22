@@ -1,8 +1,5 @@
-int a(int c, string d)
-	
-end
-
 int main()
-	
+
+	writeln 1.2, 2.9, "abc";
 
 end
