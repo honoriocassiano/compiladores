@@ -15,6 +15,8 @@ int yydebug=1;
 
 int nlinha = 1;
 
+int contador = 0;
+
 // Estrutura dos atributos de um token
 
 typedef struct
@@ -210,11 +212,17 @@ S 			: INI_ESCOPO FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 
 				//cout << $5.traducao << "\n\n";
 
-				adiciona_biblioteca_cabecalho("stdio.h");
+				adiciona_biblioteca_cabecalho("cstdio");
+				adiciona_biblioteca_cabecalho("cstdlib");
+				adiciona_biblioteca_cabecalho("cstring");
+				adiciona_biblioteca_cabecalho("iostream");
 
 				if(!erro) {
 					//cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
 					cout << cabecalho.str();
+
+					cout << "\nusing namespace std;\n\n";
+
 					cout << $2.traducao << endl;
 					cout << "int main(void)\n{";
 					cout << gera_declaracoes_variaveis() << $7.traducao << "\n\treturn 0;\n}" << endl;
@@ -224,11 +232,18 @@ S 			: INI_ESCOPO FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 			| INI_ESCOPO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 			{
 
-				adiciona_biblioteca_cabecalho("stdio.h");
+				adiciona_biblioteca_cabecalho("cstdio");
+				adiciona_biblioteca_cabecalho("cstdlib");
+				adiciona_biblioteca_cabecalho("cstring");
+				adiciona_biblioteca_cabecalho("iostream");
 
 				if(!erro) {
 					//cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
-					cout << cabecalho.str() << "int main(void) {\n" << gera_declaracoes_variaveis() << $6.traducao << "\n\treturn 0;\n}" << endl; 
+					cout << cabecalho.str();
+					cout << "\nusing namespace std;\n\n";
+
+					cout << "int main(void) {\n";
+					cout << gera_declaracoes_variaveis() << $6.traducao << "\n\treturn 0;\n}" << endl; 
 				}
 				//myfile.close();
 			}
@@ -704,6 +719,121 @@ COMANDO 	: DECLARACAO
 					erro = true;
 				}
 			}
+			| TK_READ TK_ID
+			{
+				info_variavel *variavel = recupera_variavel($2.label);
+
+				if(variavel) {
+
+					string nome_variavel_temporaria = variavel->nome_temp;
+
+					if(variavel->tipo == "string") {
+						$$.tamanho = 1024;
+						variavel->tamanho = 1024;
+
+						$$.traducao = "\tcin.getline(" + variavel->nome_temp + ", 1024);\n";
+
+					} else if(variavel->tipo == "boolean") {
+
+						stringstream traducao;
+
+						stringstream label_stream;
+
+						string label_true;
+						string label_erro;
+						string label_fim;
+
+						label_stream << "boolean_true_" << contador;
+						label_true = label_stream.str();
+						label_stream.str("");
+
+						label_stream << "boolean_erro_" << contador;
+						label_erro = label_stream.str();
+						label_stream.str("");
+
+						label_stream << "boolean_fim_" << contador;
+						label_fim = label_stream.str();
+						label_stream.str("");
+
+						string nome_variavel_temporaria_leitura = gera_variavel_temporaria("string", 1024);
+						string nome_variavel_temporaria_comparacao = gera_variavel_temporaria("boolean", 0);
+
+						traducao << "\n\tcin.getline(" << nome_variavel_temporaria_leitura << ", 1024);\n";
+
+						traducao << "\t" << nome_variavel_temporaria_comparacao << " = strcmp(" << nome_variavel_temporaria_leitura << ", \"false\");\n";
+
+
+						traducao << "\n\tif(" << nome_variavel_temporaria_comparacao << ") goto " << label_true << ";\n";
+
+						traducao << "\t" << nome_variavel_temporaria << " = 0;\n";
+
+						traducao << "\tgoto " << label_fim << ";\n\n";
+
+						traducao << label_true << ":\n";
+
+						traducao << "\t" << nome_variavel_temporaria_comparacao << " = strcmp(" << nome_variavel_temporaria_leitura << ", \"true\");\n";
+
+						traducao << "\n\tif(" << nome_variavel_temporaria_comparacao << ") goto " << label_erro << ";\n";
+
+						traducao << "\t" << nome_variavel_temporaria << " = 1;\n";
+
+						traducao << "\tgoto " << label_fim << ";\n\n";
+
+						traducao << label_erro << ":\n";
+
+						traducao << "\tcout << \"Valor inválido\" << endl;\n";
+
+						traducao << "\texit(0);\n";
+
+						traducao << label_fim << ":\n";
+
+						$$.traducao = traducao.str();
+
+						contador++;
+					} else {
+						$$.traducao = "\n\tcin >> " + nome_variavel_temporaria + ";\n\t";
+                    	$$.tamanho = 0;
+					}
+
+					$$.label = $2.label;
+					$$.tipo = "void";
+
+				} else {
+					cout << "Erro na linha " << nlinha <<": Variável \"" << $2.label << "\" não declarada neste escopo" << endl << endl;
+					erro = true;
+				}
+				/*
+				info_variavel var = buscaID($2.label);
+                $$.label = var.nome_temp;
+                $$.tipo = var.tipo;
+                if(var.tipo == "string")
+                {
+                    $$.tamanho = 1024;
+                    var.tamanho = 1024;
+                    alteraID($2.label, var);
+                    $$.traducao = "\n\tcin.getline(" + var.nome_temp + ", 1024);\n\t";
+                }
+                else if(var.tipo == "boolean")
+                {
+                	string nome_temp_leitura = gera_variavel_temporaria("string", "", 6);
+                	string nome_temp_teste = gera_variavel_temporaria("int", "");
+					string lb1 = geraLabel(); string lb2 = geraLabel(); string lb3 = geraLabel();
+
+                	$$.traducao = "\n\tcin >> " + nome_temp_leitura + ";\n\t" + nome_temp_teste + " = strcmp(" + nome_temp_leitura + ", \"true\" );\n\t";
+                	$$.traducao += "if(!" + nome_temp_teste + " == 0) goto " + lb1 + ";\n\t" + var.nome_temp + " = 1;\n\tgoto " + lb3 + ";\n" + lb1 + ":\n\t";
+                	$$.traducao += nome_temp_teste + " = strcmp(" + nome_temp_leitura + ", \"false\" );\n\t";
+                	$$.traducao += "if(!" + nome_temp_teste + " == 0) goto " + lb2 + ";\n\t" + var.nome_temp + " = 0;\n\tgoto " + lb3 + ";\n" + lb2 + ":\n\t";
+                	$$.traducao += "cout << \"Valor: \" << " + nome_temp_leitura + " << \" inválido!\\n\";\n\texit(1);\n" + lb3 + ":\n\t";
+
+                	$$.tamanho = var.tamanho;
+                }
+                else
+                {
+                	$$.traducao = "\n\tcin >> " + var.nome_temp + ";\n\t";
+                    $$.tamanho = var.tamanho;
+                }
+				*/
+			}
 			| TK_WRITE ARGS_IO
 			{
 				$$.traducao = $2.traducao;
@@ -879,7 +1009,8 @@ ATRIBUICAO 	: TK_ID TK_ATR DIREITA_ATR
 					}
 
 				} else {
-					cout << "Erro na linha " << nlinha <<": Que porra de variável \"" << $1.label << "\" é essa?" << endl << endl;
+					//cout << "Erro na linha " << nlinha <<": Que porra de variável \"" << $1.label << "\" é essa?" << endl << endl;
+					cout << "Erro na linha " << nlinha <<": Variável \"" << $1.label << "\" não declarada neste escopo" << endl << endl;
 
 					erro = true;
 				}
@@ -916,8 +1047,6 @@ DECLARACAO	: TIPO TK_ID TK_ATR DIREITA_ATR
 								
 								$$.traducao = traducao.str();
 								
-								adiciona_biblioteca_cabecalho("string.h");
-								
 							} else {
 								$$.traducao = "\t" + $4.traducao + "\n\t" + atributos.nome_temp + " " + $3.label + " " + $4.label + ";";
 							}
@@ -953,7 +1082,6 @@ DECLARACAO	: TIPO TK_ID TK_ATR DIREITA_ATR
 				if($1.label == "string") {
 					$$.traducao = "\tstrcpy(" + atributos.nome_temp + ", " + mapa_valor_padrao[$1.label] + ");\n";
 					
-					adiciona_biblioteca_cabecalho("string.h");
 				} else {
 					$$.traducao = "\n\t" + atributos.nome_temp + " = " + mapa_valor_padrao[$1.label] + ";";
 				}
@@ -994,7 +1122,9 @@ E_OP_OR		: E_OP_OR TK_OR E_OP_AND
 						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + nome_variavel_temporaria_cast + ";";
 
 					} else {
-						cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						//cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
+						<< " com um do tipo " << $3.tipo << endl << endl;
 						erro = true;
 					}
 
@@ -1047,7 +1177,9 @@ E_OP_AND	: E_OP_AND TK_AND E_REL
 						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + nome_variavel_temporaria_cast + ";";
 
 					} else {
-						cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						//cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
+						<< " com um do tipo " << $3.tipo << endl << endl;
 						erro = true;
 					}
 
@@ -1189,7 +1321,9 @@ E 			: E TK_ARIT_OP_S E_TEMP
 							$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + nome_variavel_temporaria_cast + ";";
 
 						} else {
-							cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+							//cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+							cout << "Erro na linha " << nlinha <<": Não é possível operar um valor do tipo " << $1.tipo
+								<< " com um do tipo " << $3.tipo << endl << endl;
 							erro = true;
 						}
 					}
@@ -1197,7 +1331,9 @@ E 			: E TK_ARIT_OP_S E_TEMP
 					$$.tipo = cast.resultado;
 
 				} else {
-					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+					//cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+					cout << "Erro na linha " << nlinha <<": Não é possível operar um valor do tipo " << $1.tipo
+						<< " com um do tipo " << $3.tipo << endl << endl;
 					erro = true;
 				}
 
@@ -1242,7 +1378,9 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 						$$.traducao = $$.traducao + "\t" + nome_variavel_temporaria + " = " + $1.label + " " + $2.traducao + " " + nome_variavel_temporaria_cast + ";";
 
 					} else {
-						cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						//cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+						cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
+						<< " com um do tipo " << $3.tipo << endl << endl;
 						erro = true;
 					}
 
@@ -1250,7 +1388,9 @@ E_TEMP		: E_TEMP TK_ARIT_OP_M VAL
 
 				} else {
 
-					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+					//cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+					cout << "Erro na linha " << nlinha <<": Não é possível comparar um valor do tipo " << $1.tipo
+						<< " com um do tipo " << $3.tipo << endl << endl;
 					erro = true;
 				}
 
@@ -1275,7 +1415,9 @@ E_NOT		: TK_NOT E_NOT
 					$$.traducao = $2.traducao + "\n\t" + nome_variavel_temporaria + " = " + $1.traducao + $2.label + ";";
 					
 				}else {
-					cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+					//cout << "Erro na linha " << nlinha <<": Verifique os tipos, idiota!" << endl << endl;
+					cout << "Erro na linha " << nlinha <<": Não é possível negar um valor do tipo " << $1.tipo
+						<< " com um do tipo " << $2.tipo << endl << endl;
 					erro = true;
 				}
 
@@ -1567,8 +1709,6 @@ TIPO_FUNC	: TIPO
 #include "lex.yy.c"
 
 int yyparse();
-
-int contador = 0;
 
 string gera_variavel_temporaria(string tipo, int tamanho, string nome, bool parametro) {
 

@@ -1,5 +1,9 @@
 int main()
 
-	writeln 1.2, 2.9, "abc";
+	int a;
+
+	read a;
+
+	writeln a;
 
 end
