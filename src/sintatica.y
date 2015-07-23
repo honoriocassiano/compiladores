@@ -271,7 +271,9 @@ ARGUMENTO	: TIPO TK_ID
 					if($1.label == "string") {
 						$$.traducao = $1.traducao + "* " + $2.label;
 					} else {
-						$$.traducao = $1.traducao + " " + $2.label;
+						//$$.traducao = $1.traducao + " " + $2.label;
+						$$.traducao = $1.traducao + " " + nome_variavel_temporaria;
+
 					}
 					
 					$$.label = $1.label;
@@ -394,6 +396,7 @@ FUNCAO		: FUNCAO CABECALHO_FUNC BLOCO_SEM_B
 
 				traducao << $1.traducao;
 				traducao << gera_declaracoes_variaveis();
+				traducao << $2.traducao;
 				traducao << "\n\treturn";
 				
 				if(mapa_valor_padrao.find($1.tipo) != mapa_valor_padrao.end()) {
@@ -735,31 +738,6 @@ COMANDO 	: DECLARACAO
 				$$.traducao = $1.traducao;
 				$$.tipo = "void";
 			}
-			/*
-			| TK_ID '(' PARAMETROS ')'
-			{
-				info_funcao *funcao = recupera_funcao($1.label);
-
-				if(funcao) {
-
-					if(funcao->parametros.size() == lista_parametros.size()) {
-						$$.traducao = "";
-						$$.label = "";
-
-					} else {
-						cout << "Erro na linha " << nlinha << ": A função \"" << $1.label << "\" espera receber " << funcao->parametros.size() << " parâmetros, mas foram passados " << lista_parametros.size() << "\n";
-						erro = true;
-					}
-
-					$$.label = funcao->nome_temp + "(" + $3.traducao + ")";
-					$$.traducao = $3.label + "\n\t" + funcao->nome_temp + "(" + $3.traducao + ");\n";
-
-				} else {
-					cout << "Erro na linha " << nlinha << ": Função \"" << $1.label << "\" não declarada\n";
-					erro = true;
-				}
-			}
-			*/
 			| TK_BREAK
 			{
 				if(!pilha_label_loop.empty()) {
@@ -885,37 +863,6 @@ COMANDO 	: DECLARACAO
 					cout << "Erro na linha " << nlinha <<": Variável \"" << $2.label << "\" não declarada neste escopo" << endl << endl;
 					erro = true;
 				}
-				/*
-				info_variavel var = buscaID($2.label);
-                $$.label = var.nome_temp;
-                $$.tipo = var.tipo;
-                if(var.tipo == "string")
-                {
-                    $$.tamanho = 1024;
-                    var.tamanho = 1024;
-                    alteraID($2.label, var);
-                    $$.traducao = "\n\tcin.getline(" + var.nome_temp + ", 1024);\n\t";
-                }
-                else if(var.tipo == "boolean")
-                {
-                	string nome_temp_leitura = gera_variavel_temporaria("string", "", 6);
-                	string nome_temp_teste = gera_variavel_temporaria("int", "");
-					string lb1 = geraLabel(); string lb2 = geraLabel(); string lb3 = geraLabel();
-
-                	$$.traducao = "\n\tcin >> " + nome_temp_leitura + ";\n\t" + nome_temp_teste + " = strcmp(" + nome_temp_leitura + ", \"true\" );\n\t";
-                	$$.traducao += "if(!" + nome_temp_teste + " == 0) goto " + lb1 + ";\n\t" + var.nome_temp + " = 1;\n\tgoto " + lb3 + ";\n" + lb1 + ":\n\t";
-                	$$.traducao += nome_temp_teste + " = strcmp(" + nome_temp_leitura + ", \"false\" );\n\t";
-                	$$.traducao += "if(!" + nome_temp_teste + " == 0) goto " + lb2 + ";\n\t" + var.nome_temp + " = 0;\n\tgoto " + lb3 + ";\n" + lb2 + ":\n\t";
-                	$$.traducao += "cout << \"Valor: \" << " + nome_temp_leitura + " << \" inválido!\\n\";\n\texit(1);\n" + lb3 + ":\n\t";
-
-                	$$.tamanho = var.tamanho;
-                }
-                else
-                {
-                	$$.traducao = "\n\tcin >> " + var.nome_temp + ";\n\t";
-                    $$.tamanho = var.tamanho;
-                }
-				*/
 			}
 			| TK_WRITE ARGS_IO
 			{
@@ -956,60 +903,55 @@ COMANDO 	: DECLARACAO
 
 				if(funcao) {
 
-					info_variavel *ptr_variavel = recupera_variavel($2.label);
-
 					string tipo_retorno;
 
-					if(ptr_variavel) {
+					string chave = gera_chave(funcao->tipo, $2.tipo, "=");
 
-						string chave = gera_chave(funcao->tipo, $2.tipo, "=");
+					string nome_variavel_temporaria;
 
-						string nome_variavel_temporaria;
+					if(mapa_cast.find(chave) != mapa_cast.end()) {
 
-						if(mapa_cast.find(chave) != mapa_cast.end()) {
+						stringstream traducao;
 
-							stringstream traducao;
+						tipo_cast cast = mapa_cast[chave];
 
-							tipo_cast cast = mapa_cast[chave];
+						traducao << $2.traducao << "\n";
 
-							traducao << $2.traducao << "\n";
+						if($2.tipo == "string") {
+							nome_variavel_temporaria = gera_variavel_temporaria("char*", $2.tamanho);
 
-							if($2.tipo == "string") {
-								nome_variavel_temporaria = gera_variavel_temporaria("char*", $2.tamanho);
-
-								traducao << "\t" << nome_variavel_temporaria << " = (char *) malloc(" << ($2.tamanho+1) << "* sizeof(char));\n";
-								traducao << "\t" << "strcpy(" << nome_variavel_temporaria << "," << $2.label << ");\n";
-							} else {
-								nome_variavel_temporaria = $2.label;
-							}
-
-							switch(cast.operando_cast) {
-								case 0: 
-									traducao << "\t" << $1.traducao << " " << nome_variavel_temporaria << ";\n";
-									$$.tipo = $2.tipo;
-									break;
-								case 2:
-									traducao << "\t" << $1.traducao << " " << "(" << cast.resultado << ") " << nome_variavel_temporaria << ";\n";
-									$$.tipo = cast.resultado;
-									break;
-								default:
-									cout << "Erro na linha " << nlinha <<": Impossível retornar um valor do tipo " + $2.tipo + " em uma função do tipo " + funcao->tipo + "\n";
-									erro = true;
-							}
-
-							info_variavel variavel_retorno = {$2.tipo, $2.label, $2.tamanho, false};
-
-							lista_retornos.push_back(variavel_retorno);
-
-							$$.tamanho = variavel_retorno.tamanho;
-							$$.traducao = traducao.str();
-
+							traducao << "\t" << nome_variavel_temporaria << " = (char *) malloc(" << ($2.tamanho+1) << "* sizeof(char));\n";
+							traducao << "\t" << "strcpy(" << nome_variavel_temporaria << "," << $2.label << ");\n";
 						} else {
-
-							cout << "Erro na linha " << nlinha <<": Impossível retornar um valor do tipo " + $2.tipo + " em uma função do tipo " + funcao->tipo + "\n";
-
-							erro = true;
+							nome_variavel_temporaria = $2.label;
 						}
+
+						switch(cast.operando_cast) {
+							case 0: 
+								traducao << "\t" << $1.traducao << " " << nome_variavel_temporaria << ";\n";
+								$$.tipo = $2.tipo;
+								break;
+							case 2:
+								traducao << "\t" << $1.traducao << " " << "(" << cast.resultado << ") " << nome_variavel_temporaria << ";\n";
+								$$.tipo = cast.resultado;
+								break;
+							default:
+								cout << "Erro na linha " << nlinha <<": Impossível retornar um valor do tipo " + $2.tipo + " em uma função do tipo " + funcao->tipo + "\n";
+								erro = true;
+						}
+
+						info_variavel variavel_retorno = {$2.tipo, $2.label, $2.tamanho, false};
+
+						lista_retornos.push_back(variavel_retorno);
+
+						$$.tamanho = variavel_retorno.tamanho;
+						$$.traducao = traducao.str();
+
+					} else {
+
+						cout << "Erro na linha " << nlinha <<": Impossível retornar um valor do tipo " + $2.tipo + " em uma função do tipo " + funcao->tipo + "\n";
+
+						erro = true;
 					}
 				}
 			}
@@ -1102,7 +1044,7 @@ ATRIBUICAO 	: TK_ID TK_ATR DIREITA_ATR
 COMANDO 	: E_OP_OR
 			{
 				$$.label = $1.label;
-				$$.traducao = $1.traducao;
+				$$.traducao = $1.traducao + "\n\t" + $1.label + ";\n";
 			};
 
 DECLARACAO	: TIPO TK_ID TK_ATR DIREITA_ATR
@@ -1617,6 +1559,10 @@ VAL			: '(' TIPO ')' VAL
 					}
 
 					$$.tipo = funcao->tipo;
+
+					cout << "\n\n" << $$.label << "\n\n";
+
+					lista_parametros.clear();
 
 					if(funcao->tipo == "string") {
 						$$.tamanho = 1024;
