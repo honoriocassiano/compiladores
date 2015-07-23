@@ -1,7 +1,9 @@
-global int a = 1+1;
-
 int main()
 	
-	writeln "aaa";
+	int i;
+
+	for(i = 0; i < 10; ++i)
+		writeln i;
+	end
 
 end

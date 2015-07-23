@@ -211,6 +211,18 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_SOMA;
 			}
 
+"++"		{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				return TK_INCREMENTO;
+			}
+
+"--"		{
+				yylval.traducao = yytext;
+				yylval.label = yytext;
+				return TK_DECREMENTO;
+			}
+
 "-"			{
 				yylval.traducao = yytext;
 				yylval.label = yytext;

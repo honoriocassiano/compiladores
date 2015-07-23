@@ -191,6 +191,8 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %token TK_BREAK TK_NEXT TK_ALL
 
+%token TK_INCREMENTO TK_DECREMENTO
+
 %token TK_MENOR
 %token TK_MAIOR
 %token TK_MENOR_IGUAL
@@ -535,7 +537,18 @@ EST_BLOCO	: BLOCO_COM_B
 				$$.traducao = $1.traducao;
 			}
 
-DEC_EST_FOR : TK_FOR '(' ATRIBUICAO ';' E_OP_OR ';' ATRIBUICAO ')'
+STEP_FOR	: ATRIBUICAO
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+			}
+			| ATR_UNARIA
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+			}
+
+DEC_EST_FOR : TK_FOR '(' ATRIBUICAO ';' E_OP_OR ';' STEP_FOR ')'
 			{
 				if($5.tipo == "boolean") {
 					stringstream traducao;
@@ -1698,6 +1711,12 @@ VAL			: '(' TIPO ')' VAL
 				$$.tipo = $1.tipo;
 				$$.tamanho = $1.tamanho;
 			}
+			| ATR_UNARIA
+			{
+				$$.traducao = $1.traducao;
+				$$.label = $1.label;
+				$$.tipo = $1.tipo;
+			}
 			| TK_AMPERSAND VAL
 			{
 				stringstream traducao;
@@ -1744,6 +1763,46 @@ VAL			: '(' TIPO ')' VAL
 					erro = true;
 				}
 			};
+
+ATR_UNARIA	: TK_INCREMENTO TK_ID
+			{
+				info_variavel *variavel = recupera_variavel($2.label);
+
+				if(variavel) {
+
+					if(variavel->tipo != "string" && variavel->tipo != "boolean") {
+						$$.traducao = "\n\t" + variavel->nome_temp + " = " + variavel->nome_temp + " + 1;\n";
+						$$.label = variavel->nome_temp;
+					} else {
+						cout << "Erro na linha " << nlinha << ": A operacao ++ não pode ser utilizada com uma variável do tipo " << variavel->tipo << endl << endl;
+						erro = true;
+					}
+					
+				} else {
+					cout << "Erro na linha " << nlinha <<": Variável \"" << $1.label << "\" não declarada neste escopo" << endl << endl;
+						erro = true;
+				}
+				
+			}
+			| TK_DECREMENTO TK_ID
+			{
+				info_variavel *variavel = recupera_variavel($2.label);
+
+				if(variavel) {
+
+					if(variavel->tipo != "string" && variavel->tipo != "boolean") {
+						$$.traducao = "\n\t" + variavel->nome_temp + " = " + variavel->nome_temp + " - 1;\n";
+						$$.label = variavel->nome_temp;
+					} else {
+						cout << "Erro na linha " << nlinha << ": A operacao -- não pode ser utilizada com uma variável do tipo " << variavel->tipo << endl << endl;
+						erro = true;
+					}
+					
+				} else {
+					cout << "Erro na linha " << nlinha <<": Variável \"" << $1.label << "\" não declarada neste escopo" << endl << endl;
+						erro = true;
+				}
+			}
 
 TK_REL_OP	: TK_MENOR
 			{
