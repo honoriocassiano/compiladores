@@ -1,9 +1,8 @@
+float a(int c)
+	
+end
+
 int main()
-
-	int a;
-
-	read a;
-
-	writeln a;
+	int a = a(1);
 
 end
