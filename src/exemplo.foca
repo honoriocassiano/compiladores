@@ -1,8 +1,8 @@
 int main()
 	
-	int i;
+	float i;
 
-	for(i = 0; i < 10; ++i)
+	for(i in 1.2:20:2.6)
 		writeln i;
 	end
 

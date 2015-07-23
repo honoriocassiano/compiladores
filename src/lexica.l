@@ -203,7 +203,14 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_FOR;
 			}
 
-[(){}[\];,]	{ return *yytext; }
+"in"		{
+				yylval.label = yytext;
+				yylval.traducao = yytext;
+
+				return TK_IN;
+			}
+
+[(){}[\];,:]	{ return *yytext; }
 
 "+"			{
 				yylval.traducao = yytext;

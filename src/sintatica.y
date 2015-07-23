@@ -204,7 +204,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 %token TK_AND TK_OR
 
 %token TK_IF TK_ELSE TK_ELSIF
-%token TK_WHILE TK_FOR
+%token TK_WHILE TK_FOR TK_IN
 
 %start S
 
@@ -573,6 +573,109 @@ DEC_EST_FOR : TK_FOR '(' ATRIBUICAO ';' E_OP_OR ';' STEP_FOR ')'
 					cout << "Erro na linha " << nlinha <<": A condição utilizada na estrutura do for espera um valor do tipo boolean, mas o valor utilizado foi do tipo " + $3.tipo + "\n";
 
 					erro = true;
+				}
+			}
+			| TK_FOR '(' TK_ID TK_IN RANGE ')' 
+			{
+				stringstream traducao;
+
+				info_variavel *variavel = recupera_variavel($3.label);
+
+				if(variavel) {
+
+					string nome_variavel_temporaria = variavel->nome_temp;
+					string tipo_variavel_temporaria = variavel->tipo;
+
+					conjunto_label label_atual =  gera_label($1.label, false, true);
+					string nome_variavel_temporaria_comparacao = gera_variavel_temporaria("boolean", 0);
+
+					string inicio, fim, passo;
+					{
+						int posicao_delimitador = 0;
+						string range = $5.label;
+
+						posicao_delimitador = range.find(":");
+						inicio = range.substr(0, posicao_delimitador);
+						range.erase(0, posicao_delimitador+1);
+						posicao_delimitador = range.find(":");
+						fim = range.substr(0, posicao_delimitador);
+						range.erase(0, posicao_delimitador+1);
+						passo = range;
+					}					
+
+					traducao << "\t" << $5.traducao << endl;
+					traducao << "\t" << nome_variavel_temporaria << " = " << inicio << ";\n";
+					traducao << label_atual.inicio << ":\n";
+					traducao << "\t" << nome_variavel_temporaria_comparacao << " = " << nome_variavel_temporaria << " < " << fim << ";\n";
+
+					traducao << "\n\t" << $1.traducao << "(!" << nome_variavel_temporaria_comparacao << ")";
+					traducao << " goto " << label_atual.fim << ";\n";
+
+					traducao << "_r_";
+
+					string chave = gera_chave(tipo_variavel_temporaria,$5.tipo,"=");
+
+					if(mapa_cast.find(chave) != mapa_cast.end()) {
+						tipo_cast cast = mapa_cast[chave];
+
+						switch(cast.operando_cast) {
+							case 0:
+								traducao << "\n\t" << nome_variavel_temporaria << " = " << nome_variavel_temporaria << " + " << passo << ";\n";
+								break;
+
+							case 2:
+								traducao << "\n\t" << nome_variavel_temporaria << " = (" << cast.resultado << ")" << nome_variavel_temporaria << " + " << passo << ";\n";
+								break;
+							default:
+								cout << "Erro na linha " << nlinha << ": Não é possível atribuir uma variável do tipo " << $5.tipo << " a uma do tipo " << tipo_variavel_temporaria << "\n";
+								erro = true;
+						}
+					} else {
+						cout << "Erro na linha " << nlinha << ": Não é possível atribuir uma variável do tipo " << $5.tipo << " a uma do tipo " << tipo_variavel_temporaria << "\n";
+						erro = true;
+					}
+
+					traducao << "\n\tgoto " << label_atual.inicio << ";\n";
+					traducao << "\n" << label_atual.fim << ":\n";
+
+					$$.traducao = traducao.str();
+
+				}
+
+			}
+
+RANGE		: E_OP_OR ':' E_OP_OR
+			{
+
+				if($1.tipo == "boolean" || $1.tipo == "string" || $3.tipo == "boolean" || $3.tipo == "string") {
+					
+					cout << "Erro na linha " << nlinha << ": Não é possível criar um range com variáveis não numéricas";
+					erro = true;
+
+				} else {
+
+					string chave = gera_chave($1.tipo,$3.tipo,"+");
+					tipo_cast cast = mapa_cast[chave];
+
+					$$.tipo = cast.resultado;
+					$$.traducao = $1.traducao + $3.traducao;
+					$$.label = $1.label + ":" + $3.label + ":1";
+				}
+			}
+			| E_OP_OR ':' E_OP_OR ':' E_OP_OR
+			{
+				if($1.tipo == "boolean" || $1.tipo == "string" || $3.tipo == "boolean" || $3.tipo == "string" || $5.tipo == "boolean" || $5.tipo == "string") {
+					
+					cout << "Erro na linha " << nlinha << ": Não é possível criar um range com variáveis não numéricas";
+					erro = true;
+
+				} else {
+					string chave = gera_chave($1.tipo,$3.tipo,"+");
+					tipo_cast cast = mapa_cast[chave];
+
+					$$.tipo = cast.resultado;
+					$$.traducao = $1.traducao + $3.traducao + $5.traducao;
+					$$.label = $1.label + ":" + $3.label + ":" + $5.label;
 				}
 			}
 
