@@ -175,7 +175,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %}
 
-%token TK_MAIN TK_ID TK_RETURN
+%token TK_MAIN TK_ID TK_RETURN TK_GLOBAL
 %token TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_TIPO_DOUBLE TK_TIPO_LONG TK_TIPO_STRING
 %token TK_VOID
 %token TK_ATR
@@ -211,7 +211,7 @@ void adiciona_biblioteca_cabecalho(string nome_biblioteca);
 
 %%
 
-S 			: INI_ESCOPO FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
+S 			: INI_ESCOPO COMANDOS_GLOBAIS FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 			{
 				//ofstream myfile;
 				//myfile.open ("example.c");
@@ -231,15 +231,21 @@ S 			: INI_ESCOPO FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 					//cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
 					cout << cabecalho.str();
 
+					string variaveis_funcao = gera_declaracoes_variaveis();
+
 					cout << "\nusing namespace std;\n\n";
 
-					cout << $2.traducao << endl;
+					finaliza_escopo();
+
+					cout << gera_declaracoes_variaveis() << endl;
+					cout << $3.traducao << endl;
 					cout << "int main(void)\n{";
-					cout << gera_declaracoes_variaveis() << $7.traducao << "\n\treturn 0;\n}" << endl;
+					cout << $2.traducao << endl << endl;
+					cout << variaveis_funcao << $8.traducao << "\n\treturn 0;\n}" << endl;
 				}
 				//myfile.close();
 			}
-			| INI_ESCOPO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
+			| INI_ESCOPO COMANDOS_GLOBAIS TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 			{
 
 				adiciona_biblioteca_cabecalho("cstdio");
@@ -248,16 +254,59 @@ S 			: INI_ESCOPO FUNCAO TK_TIPO_INT TK_MAIN '(' ')' BLOCO_SEM_B
 				adiciona_biblioteca_cabecalho("iostream");
 
 				if(!erro) {
-					//cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
+					//cout << "\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.traducao << "\n\treturn 0;\n}" << endl; 
+
+					string variaveis_funcao = gera_declaracoes_variaveis();
+
 					cout << cabecalho.str();
 					cout << "\nusing namespace std;\n\n";
 
+					finaliza_escopo();
+
+					cout << gera_declaracoes_variaveis();
 					cout << "int main(void) {\n";
-					cout << gera_declaracoes_variaveis() << $6.traducao << "\n\treturn 0;\n}" << endl; 
+					cout << $2.traducao << endl << endl;
+					cout << variaveis_funcao << $7.traducao << "\n\treturn 0;\n}" << endl; 
 				}
 				//myfile.close();
 			}
+
+COMANDOS_GLOBAIS: VAR_GLOBAIS
+			{
+				$$.traducao = $1.traducao;
+			}
+			|
+			{
+				$$.traducao = "";
+			}
+
+
+VAR_GLOBAIS: VAR_GLOBAIS VAR_GLOBAL ';'
+			{
+				$$.traducao = $1.traducao + $2.traducao;
+
+				if($3.tipo != "undefined") {
+					$$.tipo = $3.tipo;
+					$$.tamanho = $3.tamanho;
+				} else {
+					$$.tipo = $1.tipo;
+					$$.tamanho = $1.tamanho;
+				}	
+			}
+			| VAR_GLOBAL ';'
+			{
+				$$.traducao = $1.traducao;
+				$$.tipo = $1.tipo;
+				$$.tamanho = $1.tamanho;
+			}
 			
+VAR_GLOBAL : TK_GLOBAL DECLARACAO
+			{
+				$$.label = $2.label;
+				$$.traducao = $2.traducao;
+				$$.tipo = "void";
+			}
+
 ARGUMENTO	: TIPO TK_ID
 			{
 				string nome_variavel_temporaria = gera_variavel_temporaria($1.label, 0, $2.label, true);

@@ -1,23 +1,7 @@
+global int a = 1+1;
+
 int main()
 	
-	int numero;
-
-	int i;
-
-	writeln "Digite a quantidade de números para a sequência:";
-
-	read numero;
-
-	int a = 0;
-	int b = 1;
-
-	for(i = 0; i < numero; i=i+1)
-		int temp = a;
-
-		a = b;
-		b = temp+b;
-
-		writeln a;
-	end
+	writeln "aaa";
 
 end

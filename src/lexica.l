@@ -106,12 +106,17 @@ ID {LETRA}({LETRA}|{NUM})*
 				return TK_WRITELN;
 			}
 
-"read"	{
+"read"		{
 				yylval.label = yytext;
 				yylval.traducao = "cin";
 				return TK_READ;
 			}
 			
+"global"	{
+				yylval.label = yytext;
+				yylval.traducao = "cin";
+				return TK_GLOBAL;
+			}
 
 "next"		{
 				yylval.label = yytext;
